@@ -212,6 +212,15 @@ def send_message(conversation: str, text: str):
 
 
 # ============================================================ WhatsApp / Evolution
+def _recusa(r) -> str:
+	if r.status_code == 401:
+		return _(
+			"A Evolution API recusou a chave (401). Use a chave GLOBAL do servidor Evolution "
+			"(AUTHENTICATION_API_KEY no .env da Evolution), não o token da instância."
+		)
+	return _("A Evolution API recusou: {0}").format(r.text[:200])
+
+
 def _evo(metodo: str, caminho: str, **kw):
 	url, chave = _cfg().evo_url, _pw("evo_key")
 	if not url or not chave:
@@ -257,7 +266,7 @@ def wa_connect(number: str = ""):
 			},
 		)
 		if r.status_code >= 400 and "already" not in r.text.lower() and "in use" not in r.text.lower():
-			frappe.throw(_("A Evolution API recusou: {0}").format(r.text[:200]))
+			frappe.throw(_recusa(r))
 		# instancia ja existia: garante o webhook
 		_evo("POST", f"/webhook/set/{nome}", json={"webhook": {"enabled": True, "url": hook, "events": eventos, "byEvents": False}})
 		num = _digitos(number)
@@ -1002,7 +1011,7 @@ def wa_set_webhook():
 	except requests.RequestException as e:
 		frappe.throw(_("Não foi possível falar com a Evolution API: {0}").format(str(e)[:160]))
 	if r.status_code >= 400:
-		frappe.throw(_("A Evolution API recusou: {0}").format(r.text[:200]))
+		frappe.throw(_recusa(r))
 	return hook
 
 

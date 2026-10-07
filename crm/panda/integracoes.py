@@ -141,6 +141,11 @@ def save_messaging(evo_url: str = "", evo_key: str = "", evo_instance: str = "pa
 	cfg.evo_instance = re.sub(r"[^A-Za-z0-9_-]", "", evo_instance or "") or "panda"
 	cfg.wa_notify_numbers = notify or ""
 	pub = (public_url or "").strip().rstrip("/")
+	if pub.startswith(("http://", "https://")):
+		from urllib.parse import urlparse
+
+		u = urlparse(pub)
+		pub = f"{u.scheme}://{u.netloc}"  # so o dominio: /crm ou outro caminho quebra o webhook
 	if pub and not pub.startswith(("http://", "https://")):
 		frappe.throw(_("O endereço público deve começar com http:// ou https://"))
 	cfg.public_url = pub
