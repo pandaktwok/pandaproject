@@ -27,6 +27,10 @@
         <div>{{ __('Registered at Evolution') }}: <code class="text-ink-gray-9">{{ diag.at_evolution || '—' }}</code></div>
         <div>{{ __('Evolution address') }}: <code class="text-ink-gray-9">{{ diag.evo_url }}</code></div>
         <div>{{ __('Saved key') }}: <code class="text-ink-gray-9">{{ diag.key_info }}</code> — <b>{{ diag.key_test }}</b></div>
+        <div class="mt-1">{{ __('Last events received') }}:
+          <span v-if="!diag.ultimos?.length" class="font-medium text-ink-red-4">{{ __('none — the webhook is not arriving') }}</span>
+          <div v-for="(e, i) in diag.ultimos" :key="i"><code class="text-ink-gray-9">{{ e.quando }} · {{ e.evento }} · {{ e.jid }}</code></div>
+        </div>
         <div v-if="diag.instances">{{ __('Instances on the server') }}: <code class="text-ink-gray-9">{{ diag.instances.join(', ') || '—' }}</code></div>
         <div v-if="diag.local" class="mt-1 font-medium text-ink-red-4">{{ __('This address is local: the Evolution API cannot reach it.') }}</div>
       </div>

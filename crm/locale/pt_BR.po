@@ -10141,3 +10141,11 @@ msgstr "Chave salva"
 #: panda
 msgid "Instances on the server"
 msgstr "Instâncias no servidor"
+
+#: panda
+msgid "Last events received"
+msgstr "Últimos eventos recebidos"
+
+#: panda
+msgid "none — the webhook is not arriving"
+msgstr "nenhum — o webhook não está chegando"

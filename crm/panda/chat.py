@@ -200,7 +200,8 @@ def send_message(conversation: str, text: str):
 	conv = frappe.get_doc(CONV, conversation)
 	try:
 		if conv.channel == "WhatsApp":
-			ext = _enviar_whatsapp(_digitos(conv.external_id), text)
+			destino = conv.external_id if (conv.external_id or "").endswith("@lid") else _digitos(conv.external_id)
+			ext = _enviar_whatsapp(destino, text)
 		else:
 			ext = _enviar_instagram(conv.external_id, text)
 	except Exception as e:
@@ -344,6 +345,14 @@ def webhook_whatsapp(token: str | None = None):
 	corpo = frappe.request.get_json(silent=True) or {}
 	evento = str(corpo.get("event", "")).lower().replace("_", ".")
 	dados = corpo.get("data")
+	try:
+		ultimos = frappe.cache.get_value("panda_wa_ultimos") or []
+		d0 = (dados[0] if isinstance(dados, list) and dados else dados) or {}
+		k = d0.get("key") or {} if isinstance(d0, dict) else {}
+		ultimos = ([{"quando": str(now_datetime())[:19], "evento": evento, "jid": k.get("remoteJid") or ""}] + ultimos)[:5]
+		frappe.cache.set_value("panda_wa_ultimos", ultimos, expires_in_sec=7 * 86400)
+	except Exception:
+		pass
 	if evento == "connection.update":
 		st = (dados or {}).get("state")
 		_set_status({"open": "conectado", "connecting": "conectando"}.get(st, "desconectado"))
@@ -364,9 +373,33 @@ def webhook_whatsapp(token: str | None = None):
 	return "ok"
 
 
+def _jid_conversa(chave: dict, m: dict) -> str:
+	"""WhatsApp novo usa '@lid' no lugar do numero. Preferimos o numero real quando a Evolution manda
+	(remoteJidAlt / senderPn); senao fica o proprio @lid (da para responder por ele)."""
+	jid = chave.get("remoteJid") or ""
+	if jid.endswith("@lid"):
+		for alt in (chave.get("remoteJidAlt"), chave.get("senderPn"), m.get("senderPn"), chave.get("participantAlt")):
+			if alt and str(alt).endswith("@s.whatsapp.net"):
+				return str(alt)
+	return jid
+
+
+def _texto_msg(msg: dict) -> str:
+	return (
+		msg.get("conversation")
+		or (msg.get("extendedTextMessage") or {}).get("text")
+		or (msg.get("imageMessage") or {}).get("caption")
+		or (msg.get("videoMessage") or {}).get("caption")
+		or (msg.get("documentMessage") or {}).get("fileName")
+		or ("[áudio]" if msg.get("audioMessage") else None)
+		or ("[figurinha]" if msg.get("stickerMessage") else None)
+		or "[mídia]"
+	)
+
+
 def _processar_whatsapp(m: dict):
 	chave = m.get("key") or {}
-	jid = chave.get("remoteJid") or ""
+	jid = _jid_conversa(chave, m)
 	if jid.endswith("@g.us"):  # grupo: so capta quem escreveu (conversa de grupo nao entra no Chat)
 		if not (chave.get("fromMe") or m.get("fromMe")):
 			quem = _jid_para_numero(chave.get("participantAlt") or chave.get("participant") or m.get("participant") or "")
@@ -376,23 +409,17 @@ def _processar_whatsapp(m: dict):
 				except Exception:
 					frappe.log_error(title="Panda: captar contato do grupo")
 		return
-	if not jid.endswith("@s.whatsapp.net"):  # status e listas de transmissao
+	if not (jid.endswith("@s.whatsapp.net") or jid.endswith("@lid")):  # status e listas de transmissao
 		return
-	msg = m.get("message") or {}
-	texto = (
-		msg.get("conversation")
-		or (msg.get("extendedTextMessage") or {}).get("text")
-		or (msg.get("imageMessage") or {}).get("caption")
-		or "[mídia]"
-	)
+	texto = _texto_msg(m.get("message") or {})
 	de_mim = bool(chave.get("fromMe") or m.get("fromMe"))
-	numero = jid.split("@")[0]
-	if not de_mim:
+	numero = jid.split("@")[0] if jid.endswith("@s.whatsapp.net") else ""
+	if not de_mim and numero:
 		try:
 			_capturar_contato(numero, m.get("pushName"), foto_async=True)
 		except Exception:
 			frappe.log_error(title="Panda: captar contato")
-	conv = _conversa("WhatsApp", jid, None if de_mim else m.get("pushName"), numero)
+	conv = _conversa("WhatsApp", jid, None if de_mim else m.get("pushName"), numero or None)
 	_registrar(conv, "Out" if de_mim else "In", texto, ext_id=chave.get("id"), status="Sent" if de_mim else "Received")
 
 
@@ -1021,6 +1048,7 @@ def wa_diagnose():
 	esperado = _webhook_url()
 	local = any(x in esperado for x in ("localhost", "127.0.0.1", "0.0.0.0", ".local"))
 	out = {"expected": esperado, "local": local, "at_evolution": None, "enabled": None}
+	out["ultimos"] = frappe.cache.get_value("panda_wa_ultimos") or []
 	chave = (_pw("evo_key") or "").strip()
 	out["evo_url"] = (_cfg().evo_url or "").strip()
 	out["key_info"] = f"{len(chave)} caracteres, termina em …{chave[-4:]}" if chave else "nenhuma chave salva"
@@ -1047,18 +1075,12 @@ def _importar_registros(registros) -> int:
 	novos = 0
 	for m in registros:
 		chave = m.get("key") or {}
-		jid = chave.get("remoteJid") or ""
-		if not jid.endswith("@s.whatsapp.net") or not chave.get("id"):
+		jid = _jid_conversa(chave, m)
+		if not (jid.endswith("@s.whatsapp.net") or jid.endswith("@lid")) or not chave.get("id"):
 			continue
 		if frappe.db.exists(MSG, {"external_id": chave["id"]}):
 			continue
-		msg = m.get("message") or {}
-		texto = (
-			msg.get("conversation")
-			or (msg.get("extendedTextMessage") or {}).get("text")
-			or (msg.get("imageMessage") or {}).get("caption")
-			or "[mídia]"
-		)
+		texto = _texto_msg(m.get("message") or {})
 		de_mim = bool(chave.get("fromMe"))
 		quando = None
 		ts = m.get("messageTimestamp")
@@ -1068,7 +1090,7 @@ def _importar_registros(registros) -> int:
 			quando = datetime.fromtimestamp(int(ts)) if ts else None
 		except Exception:
 			quando = None
-		conv = _conversa("WhatsApp", jid, None if de_mim else m.get("pushName"), jid.split("@")[0])
+		conv = _conversa("WhatsApp", jid, None if de_mim else m.get("pushName"), jid.split("@")[0] if jid.endswith("@s.whatsapp.net") else None)
 		if _registrar(conv, "Out" if de_mim else "In", texto, ext_id=chave["id"], status="Sent" if de_mim else "Received", quando=quando):
 			novos += 1
 	return novos
