@@ -338,7 +338,9 @@ def _enviar_whatsapp(numero: str, texto: str) -> str | None:
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=600, seconds=60)
-def webhook_whatsapp(token: str | None = None):
+def webhook_whatsapp(token: str | None = None, **kwargs):
+	# Corpo JSON: o Frappe nao junta o ?token= da URL nos argumentos -> le direto da URL
+	token = token or frappe.request.args.get("token")
 	esperado = _pw("wa_webhook_token")
 	if not esperado or not token or not hmac.compare_digest(str(token), str(esperado)):
 		frappe.throw(_("Token inválido"), frappe.PermissionError)
