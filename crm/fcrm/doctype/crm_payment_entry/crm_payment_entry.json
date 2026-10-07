@@ -1,0 +1,25 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 03:50:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["installment_number", "supplier", "value", "paid_on", "file"],
+ "fields": [
+  {"fieldname": "installment_number", "fieldtype": "Int", "in_list_view": 1, "label": "Number"},
+  {"fieldname": "supplier", "fieldtype": "Data", "in_list_view": 1, "label": "Supplier"},
+  {"fieldname": "value", "fieldtype": "Currency", "in_list_view": 1, "label": "Paid Value"},
+  {"fieldname": "paid_on", "fieldtype": "Date", "label": "Paid On"},
+  {"fieldname": "file", "fieldtype": "Data", "label": "File"}
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-06 03:50:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Payment Entry",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
+}

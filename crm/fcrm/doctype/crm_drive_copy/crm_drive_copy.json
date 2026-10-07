@@ -1,0 +1,28 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-06 05:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["file", "deal", "status", "attempts", "next_try", "drive_file_id", "drive_path", "last_error"],
+ "fields": [
+  {"fieldname": "file", "fieldtype": "Link", "in_list_view": 1, "label": "File", "options": "File", "reqd": 1, "unique": 1},
+  {"fieldname": "deal", "fieldtype": "Link", "in_list_view": 1, "in_standard_filter": 1, "label": "Deal", "options": "CRM Deal", "search_index": 1},
+  {"fieldname": "status", "fieldtype": "Select", "in_list_view": 1, "in_standard_filter": 1, "label": "Status", "options": "Pending\nCopied\nFailed", "default": "Pending"},
+  {"fieldname": "attempts", "fieldtype": "Int", "label": "Attempts", "default": "0"},
+  {"fieldname": "next_try", "fieldtype": "Datetime", "label": "Next Try"},
+  {"fieldname": "drive_file_id", "fieldtype": "Data", "label": "Drive File Id", "read_only": 1},
+  {"fieldname": "drive_path", "fieldtype": "Data", "label": "Drive Path", "read_only": 1},
+  {"fieldname": "last_error", "fieldtype": "Small Text", "label": "Last Error", "read_only": 1}
+ ],
+ "links": [],
+ "modified": "2026-10-06 05:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Drive Copy",
+ "owner": "Administrator",
+ "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

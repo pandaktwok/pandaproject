@@ -1,0 +1,7 @@
+.env
+node_modules
+__pycache__
+*.pyc
+crm/public/frontend
+crm/www/crm.html
+.DS_Store

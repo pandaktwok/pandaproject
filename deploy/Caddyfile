@@ -1,0 +1,10 @@
+{$SITE_NAME} {
+	encode gzip
+	@socket path /socket.io/*
+	reverse_proxy @socket app:9000 {
+		header_up X-Frappe-Site-Name {$SITE_NAME}
+	}
+	reverse_proxy app:8000 {
+		header_up X-Frappe-Site-Name {$SITE_NAME}
+	}
+}

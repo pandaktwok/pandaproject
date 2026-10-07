@@ -1,0 +1,64 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 22:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "number",
+  "due_date",
+  "expected_value",
+  "paid",
+  "paid_value",
+  "paid_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Due Date"
+  },
+  {
+   "fieldname": "expected_value",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Expected Value"
+  },
+  {
+   "fieldname": "paid",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Paid"
+  },
+  {
+   "fieldname": "paid_value",
+   "fieldtype": "Currency",
+   "label": "Paid Value"
+  },
+  {
+   "fieldname": "paid_on",
+   "fieldtype": "Date",
+   "label": "Paid On"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-05 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Payment Installment",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1
+}
