@@ -57,12 +57,31 @@ def atualizar_totais_do_projeto(deal: str):
 		)
 
 
+def _dados_fornecedor(nome, telefone, email, documento, contato) -> dict:
+	"""Liga o fornecedor a Contatos (acha ou cria com origem Fornecedor) e devolve os campos da linha."""
+	from crm.panda.contatos import telefone_normalizado, vincular_fornecedor
+
+	email = (email or "").strip().lower()
+	documento = (documento or "").strip()[:30]
+	tel = telefone_normalizado(telefone)
+	v = vincular_fornecedor(nome, tel, email, documento, contato or "")
+	if v["contact"] and documento and not frappe.db.get_value("Contact", v["contact"], "panda_documento"):
+		frappe.db.set_value("Contact", v["contact"], "panda_documento", documento, update_modified=False)
+	return {"supplier_phone": tel, "supplier_email": email, "supplier_document": documento, "supplier_contact": v["contact"]}
+
+
 def _serializar_linha(line) -> dict:
+	from crm.panda.contatos import telefone_br
+
 	return {
 		"name": line.name,
 		"supplier": line.supplier,
 		"description": line.description or "",
 		"supplier_phone": line.supplier_phone or "",
+		"supplier_phone_br": telefone_br(line.supplier_phone) if line.supplier_phone else "",
+		"supplier_email": line.supplier_email or "",
+		"supplier_document": line.supplier_document or "",
+		"supplier_contact": line.supplier_contact or "",
 		"finance_tag": line.finance_tag,
 		"tag_name": frappe.db.get_value("CRM Finance Tag", line.finance_tag, "tag_name")
 		if line.finance_tag
@@ -210,6 +229,9 @@ def create_line(
 	finance_tag: str | None = None,
 	description: str = "",
 	supplier_phone: str = "",
+	supplier_email: str = "",
+	supplier_document: str = "",
+	supplier_contact: str = "",
 ):
 	_check(deal)
 	supplier = (supplier or "").strip()
@@ -220,12 +242,13 @@ def create_line(
 	installments_count = _n_parcelas(deal, mode, installments_count, first_due_date)
 	total, parcelas = _montar(amount, mode, installments_count, first_due_date)
 	line = frappe.new_doc("CRM Payment Line")
+	forn = _dados_fornecedor(supplier, supplier_phone, supplier_email, supplier_document, supplier_contact)
 	line.update(
 		{
 			"deal": deal,
 			"supplier": supplier,
 			"description": (description or "").strip(),
-			"supplier_phone": (supplier_phone or "").strip(),
+			**forn,
 			"finance_tag": finance_tag,
 			"mode": mode,
 			"amount": amount,
@@ -268,6 +291,9 @@ def update_line_full(
 	finance_tag: str | None = None,
 	description: str = "",
 	supplier_phone: str = "",
+	supplier_email: str = "",
+	supplier_document: str = "",
+	supplier_contact: str = "",
 ):
 	"""Edicao completa da linha. Parcelas pagas sao mantidas; as pendentes sao refeitas."""
 	line = frappe.get_doc("CRM Payment Line", name)
@@ -286,7 +312,7 @@ def update_line_full(
 		frappe.throw(_(str(e)))
 	line.supplier = supplier
 	line.description = (description or "").strip()
-	line.supplier_phone = (supplier_phone or "").strip()
+	line.update(_dados_fornecedor(supplier, supplier_phone, supplier_email, supplier_document, supplier_contact))
 	line.finance_tag = finance_tag
 	line.mode = mode
 	line.amount = amount

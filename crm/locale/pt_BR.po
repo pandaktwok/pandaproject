@@ -10053,3 +10053,79 @@ msgstr "A mensagem é enviada de dentro do programa, pelo WhatsApp conectado."
 #: panda
 msgid "Message sent"
 msgstr "Mensagem enviada"
+
+#: panda
+msgid "Import WhatsApp groups"
+msgstr "Importar grupos do WhatsApp"
+
+#: panda
+msgid "Search by name, number or email"
+msgstr "Buscar por nome, número ou e-mail"
+
+#: panda
+msgid "All origins"
+msgstr "Todas as origens"
+
+#: panda
+msgid "Importing"
+msgstr "Importando"
+
+#: panda
+msgid "groups"
+msgstr "grupos"
+
+#: panda
+msgid "new"
+msgstr "novos"
+
+#: panda
+msgid "Import finished"
+msgstr "Importação concluída"
+
+#: panda
+msgid "updated"
+msgstr "atualizados"
+
+#: panda
+msgid "without a visible number"
+msgstr "sem número visível"
+
+#: panda
+msgid "Newsletters"
+msgstr "Newsletters"
+
+#: panda
+msgid "Origin"
+msgstr "Origem"
+
+#: panda
+msgid "No contacts here yet"
+msgstr "Nenhum contato aqui ainda"
+
+#: panda
+msgid "Import started. You can keep using the program."
+msgstr "Importação iniciada. Você pode continuar usando o programa."
+
+#: panda
+msgid "Pick from contacts"
+msgstr "Escolher dos contatos"
+
+#: panda
+msgid "No contacts found"
+msgstr "Nenhum contato encontrado"
+
+#: panda
+msgid "No phone or email"
+msgstr "Sem telefone nem e-mail"
+
+#: panda
+msgid "Linked to Contacts"
+msgstr "Vinculado a Contatos"
+
+#: panda
+msgid "If you fill in a WhatsApp or email, the supplier is linked to Contacts (or created there automatically)."
+msgstr "Se você preencher WhatsApp ou e-mail, o fornecedor é vinculado a Contatos (ou criado lá automaticamente)."
+
+#: panda
+msgid "Chat on WhatsApp"
+msgstr "Conversar no WhatsApp"

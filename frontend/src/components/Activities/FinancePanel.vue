@@ -122,6 +122,22 @@
                   <Button size="sm" variant="ghost" :tooltip="__('Send by WhatsApp')" @click="openSend(line)">
                     <WhatsAppIcon class="h-4 w-4" />
                   </Button>
+                  <Button
+                    v-if="line.supplier_phone"
+                    size="sm"
+                    variant="ghost"
+                    icon="lucide-message-circle"
+                    :tooltip="__('Chat on WhatsApp')"
+                    @click="chatWith(line)"
+                  />
+                  <Button
+                    v-if="line.supplier_contact"
+                    size="sm"
+                    variant="ghost"
+                    icon="lucide-link"
+                    :tooltip="__('Linked to Contacts')"
+                    @click="router.push({ name: 'Contact', params: { contactId: line.supplier_contact } })"
+                  />
                 </div>
                 <div
                   v-if="openDesc === line.name"
@@ -314,19 +330,46 @@
           {{ editingName ? __('Edit supplier') : __('New payment line') }}
         </h3>
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <FormControl v-model="lineForm.supplier" :label="__('Supplier')" type="text" />
-          <div>
-            <FormControl v-model="lineForm.supplier_phone" :label="__('WhatsApp (with country code)')" type="text" placeholder="5548999999999" />
-          </div>
           <div class="sm:col-span-2">
-            <FormControl
-              v-model="pickedContact"
-              type="select"
-              :label="__('Pick from contacts / WhatsApp (optional)')"
-              :options="contactOptions"
-              @update:modelValue="applyContact"
-            />
+            <FormControl v-model="lineForm.supplier" :label="__('Supplier') + ' *'" type="text" />
           </div>
+          <FormControl
+            v-model="lineForm.supplier_phone"
+            :label="__('WhatsApp')"
+            type="text"
+            placeholder="(48) 99999-9999"
+            @blur="lineForm.supplier_phone = fmtTel(lineForm.supplier_phone)"
+          />
+          <FormControl v-model="lineForm.supplier_email" :label="__('Email')" type="text" placeholder="nome@empresa.com" />
+          <FormControl v-model="lineForm.supplier_document" :label="__('CPF/CNPJ')" type="text" />
+          <div class="flex items-end">
+            <Button class="w-full" :label="__('Pick from contacts')" iconLeft="lucide-users" @click="togglePicker" />
+          </div>
+          <div v-if="pickerOpen" class="rounded-md border p-2 sm:col-span-2">
+            <FormControl v-model="pickerQ" type="text" :placeholder="__('Search by name, number or email')" @update:modelValue="searchPicker" />
+            <div class="mt-2 max-h-48 overflow-y-auto">
+              <div v-if="!pickerRows.length" class="px-2 py-3 text-center text-xs text-ink-gray-5">{{ __('No contacts found') }}</div>
+              <button
+                v-for="c in pickerRows"
+                :key="c.name"
+                type="button"
+                class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-surface-gray-2"
+                @click="pickContact(c)"
+              >
+                <Avatar :image="c.image" :label="c.full_name" size="md" />
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-sm text-ink-gray-9">{{ c.full_name }}</span>
+                  <span class="block truncate text-xs text-ink-gray-5">{{ [c.phone_br, c.email].filter(Boolean).join(' · ') || __('No phone or email') }}</span>
+                </span>
+              </button>
+            </div>
+          </div>
+          <p v-if="lineForm.supplier_contact" class="flex items-center gap-1 text-xs text-ink-green-3 sm:col-span-2">
+            <LucideLink class="h-3.5 w-3.5" /> {{ __('Linked to Contacts') }}
+          </p>
+          <p v-else class="text-xs text-ink-gray-5 sm:col-span-2">
+            {{ __('If you fill in a WhatsApp or email, the supplier is linked to Contacts (or created there automatically).') }}
+          </p>
           <div class="sm:col-span-2">
             <FormControl v-model="lineForm.description" :label="__('Description')" type="textarea" :rows="3" />
           </div>
@@ -488,10 +531,11 @@
 
 <script setup>
 import MoneyInput from '@/components/Controls/MoneyInput.vue'
-import { call, toast, DatePicker } from 'frappe-ui'
+import { call, toast, DatePicker, Avatar } from 'frappe-ui'
 import { getFormat } from '@/utils'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 const props = defineProps({ deal: { type: String, required: true } })
 
@@ -659,26 +703,52 @@ async function removeTag(tag) {
 
 // ---- descrição, copiar e enviar por WhatsApp
 const openDesc = ref('')
-const pickedContact = ref('')
-const contacts = ref([])
-const contactOptions = computed(() => [
-  { label: '—', value: '' },
-  ...contacts.value.map((c, i) => ({ label: `${c.name} — ${c.number}`, value: String(i) })),
-])
-async function loadContacts() {
-  pickedContact.value = ''
-  try {
-    contacts.value = await call('crm.panda.chat.contacts_for_pick')
-  } catch {
-    contacts.value = []
+const pickerOpen = ref(false)
+const pickerQ = ref('')
+const pickerRows = ref([])
+let pickerTimer
+async function searchPicker() {
+  clearTimeout(pickerTimer)
+  pickerTimer = setTimeout(async () => {
+    try {
+      pickerRows.value = await call('crm.panda.contatos.buscar', { q: pickerQ.value })
+    } catch {
+      pickerRows.value = []
+    }
+  }, 250)
+}
+function togglePicker() {
+  pickerOpen.value = !pickerOpen.value
+  if (pickerOpen.value) {
+    pickerQ.value = ''
+    searchPicker()
   }
 }
-function applyContact(v) {
-  const c = contacts.value[Number(v)]
-  if (!c || v === '') return
-  if (!lineForm.supplier) lineForm.supplier = c.name
-  lineForm.supplier_phone = c.number
+// preenche so o que o contato tem (so telefone -> so telefone; telefone e e-mail -> os dois)
+function pickContact(c) {
+  if (!lineForm.supplier) lineForm.supplier = c.full_name
+  if (c.phone_br || c.phone) lineForm.supplier_phone = c.phone_br || c.phone
+  if (c.email) lineForm.supplier_email = c.email
+  lineForm.supplier_contact = c.name
+  pickerOpen.value = false
 }
+// telefone brasileiro na tela: (48) 99654-5728
+function fmtTel(v) {
+  let d = String(v || '').replace(/\D/g, '')
+  if (d.startsWith('55') && d.length > 11) d = d.slice(2)
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return v || ''
+}
+async function chatWith(line) {
+  try {
+    const conv = await call('crm.panda.chat.open_whatsapp', { number: line.supplier_phone, title: line.supplier, deal: props.deal })
+    router.push({ name: 'WhatsApp', query: { conversa: conv } })
+  } catch (e) {
+    toast.error(msg(e))
+  }
+}
+const router = useRouter()
 const nextOpen = (line) => [...line.installments].sort((a, b) => a.number - b.number).find((p) => !p.paid)
 function lineText(line) {
   const p = nextOpen(line)
@@ -712,7 +782,7 @@ function buildMsg(line = sendLine.value, email = chosenEmail.value) {
 }
 async function openSend(line) {
   sendLine.value = line
-  sendPhone.value = line.supplier_phone || ''
+  sendPhone.value = fmtTel(line.supplier_phone || '')
   let o = { saved: data.value.invoice_email || '', accounts: [] }
   try {
     o = await call('crm.panda.finance.get_send_options', { deal: props.deal })
@@ -748,16 +818,16 @@ async function doSend() {
 
 // ---- linha
 const lineDialog = ref(false)
-const lineForm = reactive({ supplier: '', description: '', supplier_phone: '', finance_tag: '', mode: 'Line Total', amount: '', installments_count: 1, first_due_date: '' })
+const lineForm = reactive({ supplier: '', description: '', supplier_phone: '', supplier_email: '', supplier_document: '', supplier_contact: '', finance_tag: '', mode: 'Line Total', amount: '', installments_count: 1, first_due_date: '' })
 const preview = ref(null)
 const editingName = ref('')
 function openLine() {
   editingName.value = ''
-  Object.assign(lineForm, { supplier: '', description: '', supplier_phone: '', finance_tag: '', mode: 'Line Total', amount: '', installments_count: 1, first_due_date: new Date().toISOString().slice(0, 10) })
+  Object.assign(lineForm, { supplier: '', description: '', supplier_phone: '', supplier_email: '', supplier_document: '', supplier_contact: '', finance_tag: '', mode: 'Line Total', amount: '', installments_count: 1, first_due_date: new Date().toISOString().slice(0, 10) })
   preview.value = null
   error.value = ''
   lineDialog.value = true
-  loadContacts()
+  pickerOpen.value = false
 }
 let timer
 watch(lineForm, () => {
@@ -811,7 +881,10 @@ function openEditLine(line) {
   Object.assign(lineForm, {
     supplier: line.supplier,
     description: line.description || '',
-    supplier_phone: line.supplier_phone || '',
+    supplier_phone: line.supplier_phone_br || line.supplier_phone || '',
+    supplier_email: line.supplier_email || '',
+    supplier_document: line.supplier_document || '',
+    supplier_contact: line.supplier_contact || '',
     finance_tag: line.finance_tag || '',
     mode: line.mode,
     amount: line.amount,
@@ -822,7 +895,7 @@ function openEditLine(line) {
   preview.value = null
   error.value = ''
   lineDialog.value = true
-  loadContacts()
+  pickerOpen.value = false
 }
 
 // ---- valor variável: pagamentos do mês

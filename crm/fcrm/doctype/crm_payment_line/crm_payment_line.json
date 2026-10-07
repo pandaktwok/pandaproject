@@ -8,6 +8,9 @@
   "supplier",
   "description",
   "supplier_phone",
+  "supplier_email",
+  "supplier_document",
+  "supplier_contact",
   "finance_tag",
   "mode",
   "amount",
@@ -106,6 +109,24 @@
    "fieldname": "supplier_phone",
    "fieldtype": "Data",
    "label": "WhatsApp do fornecedor"
+  },
+  {
+   "fieldname": "supplier_email",
+   "fieldtype": "Data",
+   "label": "E-mail do fornecedor",
+   "options": "Email"
+  },
+  {
+   "fieldname": "supplier_document",
+   "fieldtype": "Data",
+   "label": "CPF/CNPJ do fornecedor"
+  },
+  {
+   "fieldname": "supplier_contact",
+   "fieldtype": "Link",
+   "label": "Contato vinculado",
+   "options": "Contact",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

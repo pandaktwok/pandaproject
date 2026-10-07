@@ -105,7 +105,7 @@ const routes = [
     alias: '/contacts',
     path: '/contacts/view/:viewType?',
     name: 'Contacts',
-    component: () => import('@/pages/Contacts.vue'),
+    component: () => import('@/pages/ContactsPanda.vue'),
   },
   {
     path: '/contacts/:contactId',

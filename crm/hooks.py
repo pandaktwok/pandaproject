@@ -330,6 +330,7 @@ scheduler_events = {
 	"hourly": [
 		"crm.panda.drive.reprocessar_pendentes","crm.automation.events.emit_overdue_tasks"],
 	"daily": [
+		"crm.panda.chat.atualizar_fotos",
 		"crm.panda.events.avisar_pagamentos_pendentes",
 		"crm.panda.events.avisar_reta_final",
 		"crm.fcrm.doctype.crm_invitation.crm_invitation.expire_invitations",

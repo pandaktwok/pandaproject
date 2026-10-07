@@ -62,14 +62,9 @@ def _digitos(s: str) -> str:
 
 
 def _achar_contato(telefone: str) -> str | None:
-	d = _digitos(telefone)
-	if len(d) < 8:
-		return None
-	fim = d[-8:]
-	for p in frappe.get_all("Contact Phone", {"parenttype": "Contact"}, ["parent", "phone"], limit_page_length=0):
-		if _digitos(p.phone).endswith(fim):
-			return p.parent
-	return None
+	from crm.panda.contatos import achar_contato
+
+	return achar_contato(telefone)
 
 
 def _conversa(canal: str, ext_id: str, titulo: str | None = None, telefone: str | None = None) -> str:
@@ -156,6 +151,21 @@ def get_thread(conversation: str):
 
 
 @frappe.whitelist(methods=["POST"])
+def open_whatsapp(number: str, title: str = "", deal: str | None = None):
+	"""Abre (ou cria) a conversa de WhatsApp com um numero, para o botao 'Conversar no WhatsApp'."""
+	_interno()
+	from crm.panda.contatos import telefone_normalizado
+
+	n = telefone_normalizado(number)
+	if not n:
+		frappe.throw(_("Preencha o WhatsApp do fornecedor"))
+	conv = _conversa("WhatsApp", n + "@s.whatsapp.net", title or None, n)
+	if deal and frappe.has_permission("CRM Deal", "read", deal):
+		frappe.db.set_value(CONV, conv, "deal", deal)
+	return conv
+
+
+@frappe.whitelist(methods=["POST"])
 def link_conversation(conversation: str, contact: str | None = None, deal: str | None = None):
 	_interno()
 	if deal and not frappe.has_permission("CRM Deal", "read", deal):
@@ -232,7 +242,7 @@ def wa_connect(number: str = ""):
 	_admin()
 	nome = _inst()
 	hook = _webhook_url()
-	eventos = ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"]
+	eventos = ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED", "GROUP_PARTICIPANTS_UPDATE", "GROUPS_UPSERT", "CONTACTS_UPSERT", "CONTACTS_UPDATE"]
 	try:
 		r = _evo(
 			"POST",
@@ -331,6 +341,16 @@ def webhook_whatsapp(token: str | None = None):
 	elif evento == "messages.upsert":
 		for item in dados if isinstance(dados, list) else [dados or {}]:
 			_processar_whatsapp(item)
+	elif evento == "group.participants.update":
+		try:
+			_participantes_mudaram(dados or {})
+		except Exception:
+			frappe.log_error(title="Panda: participantes do grupo")
+	elif evento in ("contacts.upsert", "contacts.update"):
+		try:
+			_atualizar_contatos_evolution(dados if isinstance(dados, list) else [dados or {}])
+		except Exception:
+			frappe.log_error(title="Panda: contatos do WhatsApp")
 	frappe.db.commit()
 	return "ok"
 
@@ -338,7 +358,16 @@ def webhook_whatsapp(token: str | None = None):
 def _processar_whatsapp(m: dict):
 	chave = m.get("key") or {}
 	jid = chave.get("remoteJid") or ""
-	if not jid.endswith("@s.whatsapp.net"):  # ignora grupos e status (a API nao lista membros)
+	if jid.endswith("@g.us"):  # grupo: so capta quem escreveu (conversa de grupo nao entra no Chat)
+		if not (chave.get("fromMe") or m.get("fromMe")):
+			quem = _jid_para_numero(chave.get("participantAlt") or chave.get("participant") or m.get("participant") or "")
+			if quem:
+				try:
+					_capturar_contato(quem, m.get("pushName"), grupo=_nome_grupo(jid), foto_async=True)
+				except Exception:
+					frappe.log_error(title="Panda: captar contato do grupo")
+		return
+	if not jid.endswith("@s.whatsapp.net"):  # status e listas de transmissao
 		return
 	msg = m.get("message") or {}
 	texto = (
@@ -349,8 +378,256 @@ def _processar_whatsapp(m: dict):
 	)
 	de_mim = bool(chave.get("fromMe") or m.get("fromMe"))
 	numero = jid.split("@")[0]
+	if not de_mim:
+		try:
+			_capturar_contato(numero, m.get("pushName"), foto_async=True)
+		except Exception:
+			frappe.log_error(title="Panda: captar contato")
 	conv = _conversa("WhatsApp", jid, None if de_mim else m.get("pushName"), numero)
 	_registrar(conv, "Out" if de_mim else "In", texto, ext_id=chave.get("id"), status="Sent" if de_mim else "Received")
+
+
+# ------------------------------------------------------------ captacao de contatos (WhatsApp)
+def _jid_para_numero(jid: str) -> str:
+	"""So aceita numero de telefone de verdade (@s.whatsapp.net). IDs @lid nao dao o numero."""
+	if not jid or "@" not in jid:
+		return _digitos(jid) if jid and "@" not in jid else ""
+	n, dominio = jid.split("@", 1)
+	return _digitos(n.split(":")[0]) if dominio.startswith("s.whatsapp.net") else ""
+
+
+def _nome_grupo(jid: str) -> str:
+	chave = f"panda_wa_grupo:{jid}"
+	nome = frappe.cache.get_value(chave)
+	if nome:
+		return nome
+	try:
+		r = _evo("GET", f"/group/findGroupInfos/{_inst()}", params={"groupJid": jid})
+		nome = (r.json() or {}).get("subject") if r.status_code < 400 else None
+	except Exception:
+		nome = None
+	nome = nome or "Grupo"
+	frappe.cache.set_value(chave, nome, expires_in_sec=86400)
+	return nome
+
+
+def _eh_placeholder(nome: str | None) -> bool:
+	return not nome or not re.search(r"[A-Za-zÀ-ÿ]", nome)
+
+
+def _salvar_foto_job(contato: str, numero: str):
+	_salvar_foto(contato, numero)
+	frappe.db.commit()
+
+
+def _capturar_contato(
+	numero: str, nome: str | None = None, grupo: str | None = None, foto_url: str | None = None, foto_async: bool = False
+) -> str | None:
+	"""Cria o contato (origem WhatsApp) ou atualiza o que ja existe. Nunca troca um nome que a pessoa digitou."""
+	from crm.panda import contatos as ct
+
+	n = ct.telefone_normalizado(numero)
+	if not n:
+		return None
+	nome = (nome or "").strip()[:140] or None
+	c = ct.achar_contato(n)
+	if not c:
+		c = ct.criar_contato(nome or ct.telefone_br(n), n, "", "WhatsApp")
+	else:
+		ct.adicionar_origem(c, "WhatsApp")
+		if nome and _eh_placeholder(frappe.db.get_value("Contact", c, "first_name")):
+			frappe.db.set_value("Contact", c, {"first_name": nome, "last_name": ""}, update_modified=False)
+	if grupo:
+		atual = frappe.db.get_value("Contact", c, "panda_grupos") or ""
+		lista = [x for x in atual.split("\n") if x]
+		if grupo not in lista:
+			lista.append(grupo)
+			frappe.db.set_value("Contact", c, "panda_grupos", "\n".join(lista)[:2000], update_modified=False)
+	if not frappe.db.get_value("Contact", c, "image") and not frappe.db.get_value("Contact", c, "panda_foto_em"):
+		if foto_async and not foto_url:
+			frappe.enqueue("crm.panda.chat._salvar_foto_job", queue="short", contato=c, numero=n, enqueue_after_commit=True)
+		else:
+			_salvar_foto(c, n, foto_url)
+	return c
+
+
+def _foto_publica(numero: str) -> str | None:
+	try:
+		r = _evo("POST", f"/chat/fetchProfilePictureUrl/{_inst()}", json={"number": numero})
+		import time
+
+		time.sleep(0.15)
+		if r.status_code < 400:
+			j = r.json() or {}
+			return j.get("profilePictureUrl") or j.get("profilePicUrl")
+	except Exception:
+		pass
+	return None
+
+
+def _salvar_foto(contato: str, numero: str, url: str | None = None) -> bool:
+	"""Baixa a foto publica e guarda no sistema (o link do WhatsApp expira). Sem foto publica: so marca a data."""
+	url = url or _foto_publica(numero)
+	frappe.db.set_value("Contact", contato, "panda_foto_em", now_datetime(), update_modified=False)
+	if not url or not url.startswith("http"):
+		return False
+	try:
+		r = requests.get(url, timeout=15, stream=True)
+		if r.status_code != 200 or not (r.headers.get("content-type", "").startswith("image/")):
+			return False
+		dados = r.raw.read(3 * 1024 * 1024 + 1, decode_content=True)
+		if not dados or len(dados) > 3 * 1024 * 1024:
+			return False
+	except requests.RequestException:
+		return False
+	for antigo in frappe.get_all(
+		"File", {"attached_to_doctype": "Contact", "attached_to_name": contato, "file_name": ["like", "wa-%"]}, pluck="name"
+	):
+		frappe.delete_doc("File", antigo, ignore_permissions=True, force=True)
+	f = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": f"wa-{numero}.jpg",
+			"content": dados,
+			"attached_to_doctype": "Contact",
+			"attached_to_name": contato,
+			"is_private": 0,
+		}
+	).insert(ignore_permissions=True)
+	frappe.db.set_value("Contact", contato, "image", f.file_url, update_modified=False)
+	return True
+
+
+def _participantes_mudaram(dados: dict):
+	if str(dados.get("action", "")).lower() not in ("add", "invite", "promote", ""):
+		return
+	grupo = _nome_grupo(dados.get("id") or dados.get("groupJid") or "")
+	for p in dados.get("participants") or []:
+		jid = p if isinstance(p, str) else (p.get("phoneNumber") or p.get("id") or "")
+		n = _jid_para_numero(jid)
+		if n:
+			_capturar_contato(n, None if isinstance(p, str) else p.get("name"), grupo=grupo, foto_async=True)
+
+
+def _atualizar_contatos_evolution(lista: list):
+	"""Nome e foto novos de quem ja esta cadastrado (nao cria contato aqui)."""
+	from crm.panda import contatos as ct
+
+	for c in lista:
+		n = _jid_para_numero(c.get("remoteJid") or c.get("id") or "")
+		if not n:
+			continue
+		existente = ct.achar_contato(n)
+		if not existente:
+			continue
+		nome = (c.get("pushName") or c.get("name") or "").strip()
+		if nome and _eh_placeholder(frappe.db.get_value("Contact", existente, "first_name")):
+			frappe.db.set_value("Contact", existente, {"first_name": nome[:140], "last_name": ""}, update_modified=False)
+		if not frappe.db.get_value("Contact", existente, "image") and c.get("profilePicUrl"):
+			_salvar_foto(existente, n, c.get("profilePicUrl"))
+
+
+# ---- importacao inicial: todos os participantes de todos os grupos
+CHAVE_IMPORT = "panda_wa_import"
+
+
+@frappe.whitelist(methods=["POST"])
+def wa_importar_grupos():
+	_admin()
+	if _modo_cloud():
+		frappe.throw(_("A importação de grupos só existe no modo Evolution API"))
+	if (_cfg().wa_status or "") != "conectado":
+		frappe.throw(_("Conecte o WhatsApp primeiro"))
+	atual = frappe.cache.get_value(CHAVE_IMPORT) or {}
+	if atual.get("estado") == "rodando":
+		return atual
+	estado = {"estado": "rodando", "grupos": 0, "grupos_total": 0, "criados": 0, "atualizados": 0, "sem_numero": 0, "fotos": 0}
+	frappe.cache.set_value(CHAVE_IMPORT, estado)
+	frappe.enqueue("crm.panda.chat._importar_grupos", queue="long", timeout=7200, enqueue_after_commit=True)
+	return estado
+
+
+@frappe.whitelist()
+def wa_importar_status():
+	_admin()
+	return frappe.cache.get_value(CHAVE_IMPORT) or {"estado": "parado"}
+
+
+def _importar_grupos():
+	import time
+
+	from crm.panda import contatos as ct
+
+	est = frappe.cache.get_value(CHAVE_IMPORT) or {}
+	try:
+		r = _evo("GET", f"/group/fetchAllGroups/{_inst()}", params={"getParticipants": "true"})
+		if r.status_code >= 400:
+			raise RuntimeError(f"Evolution recusou ({r.status_code}): {r.text[:160]}")
+		grupos = r.json() or []
+		grupos = grupos if isinstance(grupos, list) else (grupos.get("groups") or [])
+		est["grupos_total"] = len(grupos)
+		# nomes e fotos que a propria Evolution ja conhece
+		conhecidos = {}
+		try:
+			rc = _evo("POST", f"/chat/findContacts/{_inst()}", json={"where": {}})
+			for c in rc.json() if rc.status_code < 400 else []:
+				n = _jid_para_numero(c.get("remoteJid") or c.get("id") or "")
+				if n:
+					conhecidos[ct.telefone_normalizado(n)] = c
+		except Exception:
+			pass
+		for g in grupos:
+			assunto = g.get("subject") or "Grupo"
+			for p in g.get("participants") or []:
+				jid = p.get("phoneNumber") or p.get("id") or p.get("jid") or ""
+				n = _jid_para_numero(jid)
+				if not n:
+					est["sem_numero"] += 1
+					continue
+				antes = ct.achar_contato(n)
+				k = conhecidos.get(ct.telefone_normalizado(n)) or {}
+				nome = k.get("pushName") or p.get("name") or p.get("notify")
+				c = _capturar_contato(n, nome, grupo=assunto, foto_url=k.get("profilePicUrl"))
+				est["atualizados" if antes else "criados"] += 1
+			est["grupos"] += 1
+			frappe.db.commit()
+			frappe.cache.set_value(CHAVE_IMPORT, est)
+			time.sleep(0.2)
+		est["estado"] = "concluido"
+	except Exception as e:
+		frappe.db.rollback()
+		frappe.log_error(title="Panda: importar grupos do WhatsApp")
+		est["estado"] = "erro"
+		est["erro"] = str(e)[:200]
+	frappe.cache.set_value(CHAVE_IMPORT, est)
+
+
+def atualizar_fotos():
+	"""Diario: renova fotos (30+ dias) e tenta de novo quem ainda nao tem. Lote pequeno para nao sobrecarregar."""
+	import time
+	from datetime import timedelta
+
+	if (_cfg().wa_status or "") != "conectado" or _modo_cloud():
+		return
+	from crm.panda import contatos as ct
+
+	limite = now_datetime() - timedelta(days=30)
+	cands = frappe.get_all(
+		"Contact",
+		{"panda_origem": ["like", "%WhatsApp%"], "panda_foto_em": ["<", limite]},
+		["name"],
+		order_by="panda_foto_em asc",
+		limit_page_length=80,
+	) + frappe.get_all(
+		"Contact", {"panda_origem": ["like", "%WhatsApp%"], "panda_foto_em": ["is", "not set"]}, ["name"], limit_page_length=80
+	)
+	for c in cands[:100]:
+		tel = frappe.db.get_value("Contact Phone", {"parent": c.name, "parenttype": "Contact"}, "phone")
+		n = ct.telefone_normalizado(tel)
+		if n:
+			_salvar_foto(c.name, n)
+			frappe.db.commit()
+			time.sleep(0.5)
 
 
 def avisar_numeros(texto: str) -> int:
@@ -718,7 +995,7 @@ def wa_set_webhook():
 		r = _evo(
 			"POST",
 			f"/webhook/set/{_inst()}",
-			json={"webhook": {"enabled": True, "url": hook, "events": ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"], "byEvents": False}},
+			json={"webhook": {"enabled": True, "url": hook, "events": ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED", "GROUP_PARTICIPANTS_UPDATE", "GROUPS_UPSERT", "CONTACTS_UPSERT", "CONTACTS_UPDATE"], "byEvents": False}},
 		)
 	except RuntimeError as e:
 		frappe.throw(str(e))

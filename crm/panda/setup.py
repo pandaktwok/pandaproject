@@ -278,6 +278,15 @@ def _criar_campo_arquivos():
 				"Contact",
 				{"fieldname": fn, "fieldtype": tipo, "label": rotulo, "insert_after": "panda_origem", **extra},
 			)
+	for fn, tipo, rotulo, extra in (
+		("panda_documento", "Data", "CPF/CNPJ", {}),
+		("panda_grupos", "Small Text", "Grupos do WhatsApp", {"read_only": 1}),
+		("panda_foto_em", "Datetime", "Foto atualizada em", {"hidden": 1, "read_only": 1}),
+	):
+		if not frappe.db.exists("Custom Field", {"dt": "Contact", "fieldname": fn}):
+			create_custom_field(
+				"Contact", {"fieldname": fn, "fieldtype": tipo, "label": rotulo, "insert_after": "panda_origem", **extra}
+			)
 	if not frappe.db.exists("Custom Field", {"dt": "File", "fieldname": "panda_key"}):
 		create_custom_field(
 			"File",

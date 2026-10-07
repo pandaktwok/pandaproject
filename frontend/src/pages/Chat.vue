@@ -140,8 +140,10 @@ import { Breadcrumbs, Button, Dialog, FormControl, call, toast } from 'frappe-ui
 import { globalStore } from '@/stores/global'
 import { showSettings, activeSettingsPage } from '@/composables/settings'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 const props = defineProps({ channel: { type: String, required: true } })
+const route = useRoute()
 const { $socket } = globalStore()
 
 const list = ref([])
@@ -278,6 +280,7 @@ function onNew(d) {
 onMounted(async () => {
   loadList()
   await loadStatus()
+  if (route.query.conversa) openConv(String(route.query.conversa))
   syncNow()
   $socket.on('panda_chat', onNew)
 })
