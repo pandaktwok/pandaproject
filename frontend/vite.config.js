@@ -21,11 +21,13 @@ export default defineConfig(async ({ mode }) => {
         },
         manifest: {
           display: 'standalone',
-          name: 'Frappe CRM',
-          short_name: 'Frappe CRM',
+          name: 'PandaProject',
+          short_name: 'PandaProject',
           start_url: '/crm',
           description:
-            'Modern & 100% Open-source CRM tool to supercharge your sales operations',
+            'Gestão de projetos com cronograma de pagamentos',
+          theme_color: '#1C1C1C',
+          background_color: '#1C1C1C',
           icons: [
             {
               src: '/assets/crm/manifest/manifest-icon-192.maskable.png',

@@ -14,6 +14,7 @@ FLAG_V6 = "panda_defaults_v6"
 FLAG_V7 = "panda_defaults_v7"
 FLAG_V8 = "panda_defaults_v8"
 FLAG_V9 = "panda_defaults_v9"
+FLAG_V10 = "panda_defaults_v10"
 
 
 def apply_defaults():
@@ -26,6 +27,7 @@ def apply_defaults():
 	_apply_v7()
 	_apply_v8()
 	_apply_v9()
+	_apply_v10()
 	_criar_campo_arquivos()
 	_desligar_lead_automatico()
 
@@ -69,6 +71,28 @@ def _apply_v8():
 	frappe.db.set_single_value("System Settings", "currency_precision", 2)
 	frappe.db.set_single_value("Global Defaults", "default_currency", "BRL")
 	frappe.db.set_default(FLAG_V8, "1")
+	frappe.db.commit()
+	frappe.clear_cache()
+
+
+def _apply_v10():
+	"""Marca PandaProject: logo da tela de login/barra do Frappe e nome da marca (so se ainda nao personalizados)."""
+	if frappe.db.get_default(FLAG_V10):
+		return
+	logo = "/assets/crm/images/brand/logo-horizontal-claro-1400w.png"
+	try:
+		if not frappe.db.get_single_value("Website Settings", "app_logo"):
+			frappe.db.set_single_value("Website Settings", "app_logo", logo)
+		if not frappe.db.get_single_value("Navbar Settings", "app_logo"):
+			frappe.db.set_single_value("Navbar Settings", "app_logo", logo)
+		frappe.db.set_single_value("Website Settings", "app_name", "PandaProject")
+		if not frappe.db.get_single_value("FCRM Settings", "brand_name") or frappe.db.get_single_value(
+			"FCRM Settings", "brand_name"
+		) in ("Frappe CRM", "CRM"):
+			frappe.db.set_single_value("FCRM Settings", "brand_name", "PandaProject")
+	except Exception:
+		frappe.log_error(title="PandaProject: marca")
+	frappe.db.set_default(FLAG_V10, "1")
 	frappe.db.commit()
 	frappe.clear_cache()
 
