@@ -10129,3 +10129,15 @@ msgstr "Se você preencher WhatsApp ou e-mail, o fornecedor é vinculado a Conta
 #: panda
 msgid "Chat on WhatsApp"
 msgstr "Conversar no WhatsApp"
+
+#: panda
+msgid "Evolution address"
+msgstr "Endereço da Evolution"
+
+#: panda
+msgid "Saved key"
+msgstr "Chave salva"
+
+#: panda
+msgid "Instances on the server"
+msgstr "Instâncias no servidor"

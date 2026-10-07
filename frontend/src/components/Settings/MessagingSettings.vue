@@ -13,7 +13,7 @@
     <template v-if="wa.mode === 'Evolution'">
       <div class="mt-3 grid gap-3 md:grid-cols-3">
         <FormControl v-model="wa.url" type="text" :label="__('Evolution API address')" placeholder="https://evolution.seudominio.com" />
-        <FormControl v-model="wa.key" type="password" :label="__('API key')" :placeholder="cfg?.wa?.key_set ? '••••••••' : ''" />
+        <FormControl v-model="wa.key" type="password" autocomplete="new-password" :label="__('API key')" :placeholder="cfg?.wa?.key_set ? '••••••••' : ''" />
         <FormControl v-model="wa.instance" type="text" :label="__('Instance name')" />
       </div>
       <div class="mt-3">
@@ -25,6 +25,9 @@
       <div v-if="diag" class="mt-3 rounded-md border p-3 text-xs text-ink-gray-8">
         <div>{{ __('Expected webhook') }}: <code class="text-ink-gray-9">{{ diag.expected }}</code></div>
         <div>{{ __('Registered at Evolution') }}: <code class="text-ink-gray-9">{{ diag.at_evolution || '—' }}</code></div>
+        <div>{{ __('Evolution address') }}: <code class="text-ink-gray-9">{{ diag.evo_url }}</code></div>
+        <div>{{ __('Saved key') }}: <code class="text-ink-gray-9">{{ diag.key_info }}</code> — <b>{{ diag.key_test }}</b></div>
+        <div v-if="diag.instances">{{ __('Instances on the server') }}: <code class="text-ink-gray-9">{{ diag.instances.join(', ') || '—' }}</code></div>
         <div v-if="diag.local" class="mt-1 font-medium text-ink-red-4">{{ __('This address is local: the Evolution API cannot reach it.') }}</div>
       </div>
       <div class="mt-3 flex flex-wrap items-center gap-2">

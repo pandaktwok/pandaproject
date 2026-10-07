@@ -222,7 +222,7 @@ def _recusa(r) -> str:
 
 
 def _evo(metodo: str, caminho: str, **kw):
-	url, chave = _cfg().evo_url, _pw("evo_key")
+	url, chave = (_cfg().evo_url or "").strip(), (_pw("evo_key") or "").strip()
 	if not url or not chave:
 		raise RuntimeError("Preencha o endereço e a chave da Evolution API em Conexões")
 	r = requests.request(
@@ -1021,6 +1021,17 @@ def wa_diagnose():
 	esperado = _webhook_url()
 	local = any(x in esperado for x in ("localhost", "127.0.0.1", "0.0.0.0", ".local"))
 	out = {"expected": esperado, "local": local, "at_evolution": None, "enabled": None}
+	chave = (_pw("evo_key") or "").strip()
+	out["evo_url"] = (_cfg().evo_url or "").strip()
+	out["key_info"] = f"{len(chave)} caracteres, termina em …{chave[-4:]}" if chave else "nenhuma chave salva"
+	try:
+		t = _evo("GET", "/instance/fetchInstances")
+		out["key_test"] = {200: "chave aceita"}.get(t.status_code, f"recusada ({t.status_code})")
+		if t.status_code < 400:
+			nomes = [((i.get("instance") or i).get("instanceName") or (i.get("instance") or i).get("name")) for i in (t.json() or [])]
+			out["instances"] = [n for n in nomes if n]
+	except Exception as e:
+		out["key_test"] = f"sem resposta: {str(e)[:120]}"
 	try:
 		r = _evo("GET", f"/webhook/find/{_inst()}")
 		if r.status_code < 400:
