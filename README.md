@@ -1,209 +1,47 @@
-# PandaProject v1.1
+# PandaProject
 
-Programas de gestao de projetos com cronograma de pagamentos, baseado em Frappe CRM. Veja DEPLOY.md.
+**Gestão de projetos com cronograma de pagamentos**, feita em português (pt-BR) para organizações e equipes que precisam acompanhar, em um só lugar, o andamento dos projetos, o dinheiro que entra e sai e a conversa com fornecedores e clientes.
 
----
+> **Versão 1.1** · fork de código aberto do [Frappe CRM](https://github.com/frappe/crm) · licença AGPL-3.0
 
-<div align="center" markdown="1">
+## Sobre este projeto
 
-<a href="https://frappe.io/products/crm">
-    <img src=".github/logo.svg" height="80" alt="Frappe CRM Logo">
-</a>
+O PandaProject é um **fork do [Frappe CRM](https://github.com/frappe/crm)** (v1.86), da Frappe Technologies. Aproveitamos a base sólida dele (framework Frappe, Vue 3, permissões, kanban, listas, e-mail, tarefas) e adaptamos o produto: onde o CRM trata *negócios* (deals), o PandaProject trata **projetos**, cada um com seu cronograma financeiro.
 
-<h1>Frappe CRM</h1>
+O primeiro cliente é a Sociedade Cultural Cruzeiro do Sul (SCCS), de Criciúma/SC. A meta é oferecê-lo como SaaS pago para outras organizações.
 
-**Simplify Sales, Amplify Relationships**
+## O que o PandaProject acrescenta ao Frappe CRM
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/frappe/crm)](https://github.com/frappe/crm/releases)
+- **Projetos com cronograma de pagamentos:** linhas por fornecedor, parcelas com vencimento e valor previsto/pago, modos de cálculo (total da linha, por parcela, variável), descrição e telefone do fornecedor.
+- **Painel financeiro do projeto:** próximo pagamento, copiar o pedido de nota, **enviar pedido de nota por WhatsApp** direto do programa, e-mail de recebimento da nota por projeto.
+- **Dashboard de gestão:** totais de projetos (andamento/encerrados), valor total e médio, fornecedores, gráfico de projetos por tipo/mês, previsto × pago, feed de atividades e relatório para imprimir.
+- **Chat (WhatsApp e Instagram):** WhatsApp via [Evolution API](https://github.com/EvolutionAPI/evolution-api) (conexão por QR ou código de pareamento) e Instagram via Meta; histórico vinculado a contatos e projetos.
+- **Caixa de entrada de e-mail** integrada (Gmail, Outlook, Hostinger e outros).
+- **Google Drive:** arquivos e notas dos pagamentos organizados automaticamente.
+- **Calendário e tarefas** ligados aos projetos, com avisos de pagamentos pendentes.
+- **Agente de ajuda com IA** (OpenAI-compatível, Claude ou Gemini) que só responde dúvidas de uso do programa, além de um endpoint MCP.
+- **LGPD:** origem do contato, base legal, data de consentimento e política de privacidade configurável.
+- **Interface 100% em português do Brasil** e moeda real (BRL) por padrão.
 
-<div>
-    <picture>
-        <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/FrappeCRMHeroImage.png">
-        <img width="1402" alt="Frappe CRM Hero Image" src=".github/screenshots/FrappeCRMHeroImage.png">
-    </picture>
-</div>
+Os documentos de ajuda ficam em `crm/panda/ajuda/`; o código específico do PandaProject fica em `crm/panda/` e no frontend em `frontend/src`.
 
-[Live Demo](https://frappecrm-demo.frappe.cloud/api/method/crm.api.live_demo.login) - [Website](https://frappe.io/crm) - [Documentation](https://docs.frappe.io/crm)
+## Como rodar
 
-</div>
-
-## Frappe CRM
-
-Frappe CRM is a simple, affordable, open-source CRM tool designed for modern sales teams with unlimited users. Frappe CRM is crafted for providing a great user experience, packed with features for core CRM activities helping you build strong customer relationships while keeping things clean and organised.
-
-### Motivation
-
-The motivation behind building Frappe CRM stems from the need for a simple, customizable, and open-source solution tailored to modern business needs. Many existing CRMs are either too complex, overly generic, or locked behind steep pricing models that hinder accessibility and flexibility. Frappe CRM was designed to bridge this gap, offering a tool that empowers businesses to manage their customer relationships seamlessly while being easy to adapt to specific workflows. Built on the Frappe framework, it prioritizes usability, extensibility, and affordability, making it an ideal choice for growing teams and organizations looking for a CRM that aligns with their unique processes.
-
-### Key Features
-
--   **User-Friendly and Flexible:** A simple, intuitive interface that’s easy to navigate and highly customizable, enabling teams to adapt it to their specific processes effortlessly.
--   **All-in-One Lead/Deal Page:** Consolidate all essential actions and details—like activities, comments, notes, tasks, and more—into a single page for a seamless workflow experience.
--   **Kanban View:** Manage leads and deals visually with a drag-and-drop Kanban board, offering clarity and efficiency in tracking progress across stages.
--   **Custom Views:** Design personalized views to organize and display leads and deals using custom filters, sorting, and columns, ensuring quick access to the most relevant information.
-
-    <details>
-    <summary>Screenshots</summary>
-
-    <div>
-        <picture>
-            <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/LeadList.png">
-            <img width="1402" alt="Lead List" src=".github/screenshots/LeadList.png">
-        </picture>
-    </div>
-    <div>
-        <picture>
-            <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/LeadPage.png">
-            <img width="1402" alt="Lead Page" src=".github/screenshots/LeadPage.png">
-        </picture>
-    </div>
-    <div>
-        <picture>
-            <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/EmailTemplate.png">
-            <img width="1402" alt="Email Template" src=".github/screenshots/EmailTemplate.png">
-        </picture>
-    </div>
-    <div>
-        <picture>
-            <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/CallUI.png">
-            <img width="1402" alt="Call UI" src=".github/screenshots/CallUI.png">
-        </picture>
-    </div>
-    <div>
-        <picture>
-            <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/CallLog.png">
-            <img width="1402" alt="Call Log" src=".github/screenshots/CallLog.png">
-        </picture>
-    </div>
-
-    </details>
-
-### Integrations
-
--   **Twilio:** Integrate Twilio to make and receive calls from the CRM. You can also record calls. It is a built-in integration.
--   **Exotel:** Integrate Exotel to make and receive calls via agents mobile phone from the CRM. You can also record calls. It is a built-in integration.
--   **WhatsApp:** Integrate WhatsApp to send and receive messages from the CRM. [Frappe WhatsApp](https://github.com/shridarpatil/frappe_whatsapp) is used for this integration.
--   **ERPNext:** Integrate with [ERPNext](https://erpnext.com) to extend the CRM capabilities to include invoicing, accounting, and more.
-
-### Under the Hood
-
-- [Frappe Framework](https://github.com/frappe/frappe): A full-stack web application framework.
-- [Frappe UI](https://github.com/frappe/frappe-ui): A Vue-based UI library, to provide a modern user interface.
-
-### Compatibility
-This app is compatible with the following versions of Frappe and ERPNext:
-
-| CRM branch            | Stability | Frappe branch        | ERPNext branch       |
-| :-------------------- | :-------- | :------------------- | :------------------- |
-| main - v1.x           | stable    | v15.x & v16.x        | v15.x & v16.x        |
-| develop - future/v2.x | unstable  | develop - future/v17 | develop - future/v17 |
-
-## Getting Started (Production)
-
-### Managed Hosting
-
-Get started with your personal or business site with a few clicks on Frappe Cloud - our official hosting service.
-<div>
-	<a href="https://frappecloud.com/crm/signup" target="_blank">
-		<picture>
-			<source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/try-on-fc-white.png">
-			<img src="https://frappe.io/files/try-on-fc-black.png" alt="Try on Frappe Cloud" height="28" />
-		</picture>
-	</a>
-</div>
-
-### Self Hosting
-
-Follow these steps to set up Frappe CRM in production:
-
-**Step 1**: Download the easy install script
+**Produção (VPS com Docker):** veja [DEPLOY.md](DEPLOY.md). Resumo:
 
 ```bash
-wget https://frappe.io/easy-install.py
+cp .env.example .env     # edite domínio e senhas
+docker compose up -d --build
 ```
 
-**Step 2**: Run the deployment command
+**Desenvolvimento local (Windows/Linux):** a pasta [`dev/`](dev) tem o ambiente Docker usado no desenvolvimento (`docker compose up`, depois `rebuild.sh` a cada alteração).
 
-```bash
-python3 ./easy-install.py deploy \
-    --project=crm_prod_setup \
-    --email=email.example.com \
-    --image=ghcr.io/frappe/crm \
-    --version=stable \
-    --app=crm \
-    --sitename subdomain.domain.tld
-```
+## Estado do projeto
 
-Replace the following parameters with your values:
+As funcionalidades acima estão implementadas, mas as integrações que dependem de chaves externas (Google, Meta/Instagram, e-mail, WhatsApp/Evolution, IA) ainda estão em fase de testes. Use com cuidado em produção e faça backup (`bench backup`).
 
--   `email.example.com`: Your email address
--   `subdomain.domain.tld`: Your domain name where CRM will be hosted
+## Créditos e licença
 
-The script will set up a production-ready instance of Frappe CRM with all the necessary configurations in about 5 minutes.
-
-## Getting Started (Development)
-
-### Local Setup
-
-1. [Setup Bench](https://docs.frappe.io/framework/user/en/installation).
-1. In the frappe-bench directory, run `bench start` and keep it running.
-1. Open a new terminal session and cd into `frappe-bench` directory and run following commands:
-    ```sh
-    $ bench get-app crm
-    $ bench new-site sitename.localhost --install-app crm
-    $ bench browse sitename.localhost --user Administrator
-    ```
-1. Access the crm page at `sitename.localhost:8000/crm` in your web browser.
-
-**For Frontend Development**
-1. Open a new terminal session and cd into `frappe-bench/apps/crm`, and run the following commands:
-    ```
-    yarn install
-    yarn dev
-    ```
-1. Now, you can access the site on vite dev server at `http://sitename.localhost:8080`
-
-**Note:** You'll find all the code related to Frappe CRM's frontend inside `frappe-bench/apps/crm/frontend`
-
-### Docker
-
-You need Docker, docker-compose and git setup on your machine. Refer [Docker documentation](https://docs.docker.com/). After that, follow below steps:
-
-**Step 1**: Setup folder and download the required files
-
-    mkdir frappe-crm
-    cd frappe-crm
-
-    # Download the docker-compose file
-    wget -O docker-compose.yml https://raw.githubusercontent.com/frappe/crm/develop/docker/docker-compose.yml
-
-    # Download the setup script
-    wget -O init.sh https://raw.githubusercontent.com/frappe/crm/develop/docker/init.sh
-
-**Step 2**: Run the container and daemonize it
-
-    docker compose up -d
-
-**Step 3**: The site [http://crm.localhost:8000/crm](http://crm.localhost:8000/crm) should now be available. The default credentials are:
-
--   Username: Administrator
--   Password: admin
-
-## Learn and connect
-
--   [Telegram Public Group](https://t.me/frappecrm)
--   [Discuss Forum](https://discuss.frappe.io/c/frappe-crm)
--   [Documentation](https://docs.frappe.io/crm)
--   [YouTube](https://www.youtube.com/@frappetech)
--   [X/Twitter](https://x.com/frappetech)
-
-<br>
-<br>
-<div align="center" style="padding-top: 0.75rem;">
-	<a href="https://frappe.io" target="_blank">
-		<picture>
-			<source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/Frappe-white.png">
-			<img src="https://frappe.io/files/Frappe-black.png" alt="Frappe Technologies" height="28"/>
-		</picture>
-	</a>
-</div>
+- Base: [Frappe CRM](https://github.com/frappe/crm) © Frappe Technologies Pvt. Ltd., sob [GNU AGPL-3.0](LICENSE). Todo o crédito do núcleo vai para a equipe e a comunidade do Frappe.
+- Como este é um derivado, o PandaProject também é distribuído sob **AGPL-3.0**: quem oferecer o programa pela rede deve disponibilizar o código-fonte, incluindo as modificações.
+- Mantido por [@pandaktwok](https://github.com/pandaktwok).
