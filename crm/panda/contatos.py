@@ -191,7 +191,13 @@ def listar(q: str = "", origem: str = ""):
 			"creation": str(r.creation),
 		}
 		(news if origens == ["Newsletter"] else contatos).append(item)
-	return {"contatos": contatos, "newsletters": news, "origens": ORIGENS}
+	try:
+		vincular_emails_automatico()
+		pend = emails_pendentes(q)
+	except Exception:
+		frappe.log_error(title="Panda: e-mails pendentes")
+		pend = []
+	return {"contatos": contatos, "newsletters": news, "pendentes": pend, "origens": ORIGENS}
 
 
 @frappe.whitelist()
@@ -238,3 +244,76 @@ def vincular_fornecedor(nome: str, whatsapp: str = "", email: str = "", document
 		return {"contact": None, "linked": False, "created": False}
 	novo = criar_contato(nome, tel, email, "Fornecedor", documento)
 	return {"contact": novo, "linked": False, "created": True}
+
+
+# ============================================================ E-mails recebidos sem cadastro (pendentes)
+_SISTEMA = ("noreply", "no-reply", "donotreply", "do-not-reply", "mailer-daemon", "postmaster", "notification", "bounce")
+
+
+def _remetentes_recebidos(limite: int = 2000) -> list[dict]:
+	return frappe.db.sql(
+		"""select lower(sender) as email, max(sender_full_name) as nome, max(creation) as ultimo, count(*) as qtd
+		from `tabCommunication`
+		where communication_medium='Email' and sent_or_received='Received' and ifnull(sender,'')!=''
+		group by lower(sender) order by ultimo desc limit %s""",
+		limite,
+		as_dict=True,
+	)
+
+
+def _emails_conhecidos() -> set[str]:
+	tem = {(e or "").lower() for e in frappe.get_all("Contact Email", {"parenttype": "Contact"}, pluck="email_id", limit_page_length=0)}
+	tem |= {(e or "").lower() for e in frappe.get_all("Email Account", pluck="email_id")}
+	return tem
+
+
+@frappe.whitelist()
+def emails_pendentes(q: str = ""):
+	"""Quem mandou e-mail e ainda nao esta em Contatos."""
+	frappe.has_permission("Contact", "read", throw=True)
+	conhecidos, busca, out = _emails_conhecidos(), (q or "").strip().lower(), []
+	for r in _remetentes_recebidos():
+		e = (r.email or "").strip()
+		if not e or e in conhecidos or any(x in e for x in _SISTEMA):
+			continue
+		if busca and busca not in e and busca not in (r.nome or "").lower():
+			continue
+		out.append({"email": e, "nome": (r.nome or "").strip() if (r.nome or "").strip().lower() != e else "", "ultimo": str(r.ultimo)[:16], "qtd": r.qtd})
+	return out[:300]
+
+
+def vincular_emails_automatico():
+	"""Se o nome de quem mandou o e-mail e igual ao de um contato (um so), o e-mail entra nesse contato."""
+	conhecidos = _emails_conhecidos()
+	por_nome: dict[str, list[str]] = {}
+	for c in frappe.get_all("Contact", fields=["name", "full_name"], limit_page_length=0):
+		k = re.sub(r"\s+", " ", (c.full_name or "").strip().lower())
+		if k:
+			por_nome.setdefault(k, []).append(c.name)
+	for r in _remetentes_recebidos(500):
+		e = (r.email or "").strip()
+		nome = re.sub(r"\s+", " ", (r.nome or "").strip().lower())
+		if not e or e in conhecidos or not nome or nome == e or any(x in e for x in _SISTEMA):
+			continue
+		alvo = por_nome.get(nome) or []
+		if len(alvo) != 1:
+			continue
+		doc = frappe.get_doc("Contact", alvo[0])
+		doc.append("email_ids", {"email_id": e, "is_primary": 0 if doc.email_ids else 1})
+		doc.save(ignore_permissions=True)
+		adicionar_origem(doc.name, "E-mail")
+		conhecidos.add(e)
+	frappe.db.commit()
+
+
+@frappe.whitelist(methods=["POST"])
+def criar_de_email(email: str, nome: str = ""):
+	"""Botao 'Criar contato' da lista de pendentes."""
+	frappe.has_permission("Contact", "create", throw=True)
+	email = (email or "").strip().lower()
+	if not validate_email_address(email):
+		frappe.throw(_("E-mail inválido"))
+	existente = achar_contato(email=email)
+	if existente:
+		return existente
+	return criar_contato(nome or email.split("@")[0], "", email, "E-mail")

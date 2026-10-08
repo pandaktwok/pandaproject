@@ -42,6 +42,26 @@
             </div>
           </div>
         </div>
+        <div v-if="suggestions.length && !draft" class="pt-1.5">
+          <div class="px-2 pb-1 text-xs text-ink-gray-5">{{ __('Pending emails') }}</div>
+          <input
+            v-model="sq"
+            class="mb-1 w-full rounded border-0 bg-surface-gray-2 px-2 py-1 text-sm text-ink-gray-8 focus:ring-0"
+            :placeholder="__('Search')"
+          />
+          <div class="max-h-40 overflow-y-auto">
+            <button
+              v-for="s in filtered"
+              :key="s.email"
+              type="button"
+              class="flex w-full flex-col rounded px-2 py-1 text-left hover:bg-surface-gray-2"
+              @click="pick(s)"
+            >
+              <span class="truncate text-sm text-ink-gray-8">{{ s.email }}</span>
+              <span v-if="s.nome" class="truncate text-xs text-ink-gray-5">{{ s.nome }}</span>
+            </button>
+          </div>
+        </div>
         <div v-if="!draft" class="pt-1.5">
           <Button
             variant="ghost"
@@ -59,7 +79,7 @@
 <script setup>
 import PrimaryDropdownItem from '@/components/PrimaryDropdownItem.vue'
 import { Popover } from 'frappe-ui'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   value: { type: [String, Number], default: '' },
@@ -69,7 +89,17 @@ const props = defineProps({
   validate: { type: Function, default: null },
   onCreate: { type: Function, default: null },
   label: { type: String, default: '' },
+  suggestions: { type: Array, default: () => [] },
 })
+
+const sq = ref('')
+const filtered = computed(() => {
+  const q = sq.value.trim().toLowerCase()
+  return props.suggestions.filter((s) => !q || s.email.includes(q) || (s.nome || '').toLowerCase().includes(q)).slice(0, 50)
+})
+async function pick(s) {
+  await props.onCreate?.(s.email)
+}
 
 // Drafted here, never in the parent's doc, so an incomplete value can't leak
 // into an auto-save

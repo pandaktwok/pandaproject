@@ -111,6 +111,7 @@
                           :options="field.options"
                           :validate="field.validate"
                           :onCreate="field.onCreate"
+                          :suggestions="field.suggestions || []"
                           :label="field.label"
                         />
                         <Checkbox

@@ -65,17 +65,23 @@
       <!-- Três blocos alinhados por linhas de altura fixa: fornecedor (fixo) | parcelas (rola) | totais (fixo).
            O cabeçalho fica fora da rolagem vertical; o do meio acompanha a rolagem horizontal. -->
       <div v-else>
-      <div class="mb-1 flex items-center gap-1.5 text-xs text-ink-red-4">
-        <LucideTriangleAlert class="h-3.5 w-3.5" />
-        {{ __('Red: last 3 installments of each supplier and dates after the project end') }}
+      <div class="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <span class="flex items-center gap-1.5 text-ink-red-4"><LucideTriangleAlert class="h-3.5 w-3.5" />{{ __('Red: last 3 installments of each supplier') }}</span>
+        <span class="flex items-center gap-1.5 text-ink-amber-3"><LucideTriangleAlert class="h-3.5 w-3.5" />{{ __('Yellow: after the project end') }}</span>
       </div>
       <div class="overflow-hidden rounded-lg border">
         <div class="flex h-10 w-full bg-surface-gray-2 text-sm text-ink-gray-6">
           <div class="flex w-56 shrink-0 items-center border-r px-3">{{ __('Supplier') }}</div>
           <div ref="headScroller" class="min-w-0 flex-1 overflow-hidden">
             <div class="grid h-10 min-w-full" :style="gridStyle">
-              <div v-for="n in maxInstallments" :key="n" class="flex items-center px-3">
-                {{ __('Installment') }} {{ n }}
+              <div
+                v-for="m in months"
+                :key="m.key"
+                class="flex items-center px-3 capitalize"
+                :class="m.after ? 'bg-surface-amber-1 text-ink-amber-3' : ''"
+                :title="m.after ? __('After the project end') : ''"
+              >
+                {{ m.label }}
               </div>
             </div>
           </div>
@@ -157,42 +163,42 @@
                 :class="i ? 'border-t' : ''"
                 :style="gridStyle"
               >
-                <div v-for="n in maxInstallments" :key="n" class="px-2 py-2">
+                <div v-for="(p, j) in cellsOf(line)" :key="j" class="px-2 py-2" :class="months[j]?.after ? 'bg-surface-amber-1' : ''">
                   <div
-                    v-if="parcela(line, n)"
+                    v-if="p"
                     class="h-full rounded-md border p-2"
-                    :class="cellClass(line, parcela(line, n))"
+                    :class="cellClass(line, p)"
                   >
-                    <div class="flex items-center justify-between gap-1 text-xs" :class="isRed(line, parcela(line, n)) ? 'text-ink-red-4' : 'text-ink-gray-5'">
-                      <span>{{ day(parcela(line, n).due_date) }}</span>
-                      <span v-if="afterEnd(parcela(line, n))" :title="__('Due after the project end date')">
-                        <LucideTriangleAlert class="h-3.5 w-3.5 text-ink-red-4" />
+                    <div class="flex items-center justify-between gap-1 text-xs" :class="isRed(line, p) ? 'text-ink-red-4' : afterEnd(p) && !p.paid ? 'text-ink-amber-3' : 'text-ink-gray-5'">
+                      <span>{{ day(p.due_date) }} · {{ p.number }}/{{ line.installments.length }}</span>
+                      <span v-if="afterEnd(p)" :title="__('Due after the project end date')">
+                        <LucideTriangleAlert class="h-3.5 w-3.5 text-ink-amber-3" />
                       </span>
                     </div>
                     <div class="text-base-medium text-ink-gray-9">
-                      {{ money(parcela(line, n).paid ? parcela(line, n).paid_value : parcela(line, n).expected_value) }}
+                      {{ money(p.paid ? p.paid_value : p.expected_value) }}
                     </div>
-                    <div v-if="line.mode === 'Variable' && !parcela(line, n).paid" class="text-xs" :class="spent(line, n) > parcela(line, n).expected_value ? 'text-ink-red-4' : 'text-ink-gray-6'">
-                      {{ __('Spent') }}: {{ money(spent(line, n)) }}
+                    <div v-if="line.mode === 'Variable' && !p.paid" class="text-xs" :class="spent(line, p.number) > p.expected_value ? 'text-ink-red-4' : 'text-ink-gray-6'">
+                      {{ __('Spent') }}: {{ money(spent(line, p.number)) }}
                     </div>
-                    <div v-if="parcela(line, n).paid" class="text-xs text-ink-green-3">
-                      {{ __('Paid On') }} {{ day(parcela(line, n).paid_on) }}
+                    <div v-if="p.paid" class="text-xs text-ink-green-3">
+                      {{ __('Paid On') }} {{ day(p.paid_on) }}
                     </div>
                     <Button
                       v-if="line.mode === 'Variable'"
                       class="mt-1 w-full"
                       size="sm"
-                      :variant="parcela(line, n).paid ? 'ghost' : 'subtle'"
-                      :label="`${__('Payments')} (${entriesOf(line, n).length})`"
-                      @click="openMonth(line, parcela(line, n))"
+                      :variant="p.paid ? 'ghost' : 'subtle'"
+                      :label="`${__('Payments')} (${entriesOf(line, p.number).length})`"
+                      @click="openMonth(line, p)"
                     />
                     <Button
-                      v-else-if="!parcela(line, n).paid"
+                      v-else-if="!p.paid"
                       class="mt-1 w-full"
                       size="sm"
                       variant="subtle"
                       :label="__('Register payment')"
-                      @click="openPay(line, parcela(line, n))"
+                      @click="openPay(line, p)"
                     />
                     <Button
                       v-else
@@ -200,7 +206,7 @@
                       size="sm"
                       variant="ghost"
                       :label="__('Undo payment')"
-                      @click="undo(line, parcela(line, n))"
+                      @click="undo(line, p)"
                     />
                   </div>
                 </div>
@@ -386,18 +392,21 @@
             :options="modeOptions"
           />
           <MoneyInput v-model="lineForm.amount" :label="__('Amount')" />
-          <FormControl
-            v-if="lineForm.mode !== 'Variable'"
-            v-model="lineForm.installments_count"
-            :label="__('Installments')"
-            type="number"
-          />
+          <div v-if="lineForm.mode !== 'Variable' && lineForm.mode !== 'Single'">
+            <FormControl v-model="lineForm.installments_count" :label="__('Installments')" type="number" />
+            <p v-if="maxParcelas" class="mt-1 text-xs" :class="Number(lineForm.installments_count) > maxParcelas ? 'text-ink-amber-3' : 'text-ink-gray-5'">
+              {{ __('The project ends in') }} {{ monthLabel(endDate) }}: {{ __('at most') }} {{ maxParcelas }} {{ __('installments from this first due date') }}
+            </p>
+          </div>
+          <div v-else-if="lineForm.mode === 'Single'" class="self-end pb-1 text-sm text-ink-gray-6">
+            {{ __('A single payment with the full amount.') }}
+          </div>
           <div v-else class="text-sm text-ink-gray-6 sm:col-span-2">
             {{ __('The total is divided by the months from the first due date to the project end. Each month you add the real payments (several suppliers allowed).') }}
           </div>
           <div>
             <div class="mb-1.5 text-xs text-ink-gray-5">{{ __('First Due Date') }}</div>
-            <DatePicker :value="lineForm.first_due_date" :format="dateFormat" @change="(v) => (lineForm.first_due_date = v)" />
+            <DatePicker :value="lineForm.first_due_date" :format="'DD/MM/YYYY'" @change="(v) => (lineForm.first_due_date = v)" />
           </div>
         </div>
         <div v-if="editingName" class="mt-3 text-sm text-ink-gray-6">
@@ -441,7 +450,7 @@
             <MoneyInput v-model="entryForm.value" :label="__('Paid Value')" />
             <div>
               <div class="mb-1.5 text-xs text-ink-gray-5">{{ __('Paid On') }}</div>
-              <DatePicker :value="entryForm.paid_on" :format="dateFormat" @change="(v) => (entryForm.paid_on = v)" />
+              <DatePicker :value="entryForm.paid_on" :format="'DD/MM/YYYY'" @change="(v) => (entryForm.paid_on = v)" />
             </div>
             <div />
             <div>
@@ -479,7 +488,7 @@
             <MoneyInput v-model="payForm.paid_value" :label="__('Paid Value')" />
             <div>
               <div class="mb-1.5 text-xs text-ink-gray-5">{{ __('Paid On') }}</div>
-              <DatePicker :value="payForm.paid_on" :format="dateFormat" @change="(v) => (payForm.paid_on = v)" />
+              <DatePicker :value="payForm.paid_on" :format="'DD/MM/YYYY'" @change="(v) => (payForm.paid_on = v)" />
             </div>
           </div>
           <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -549,8 +558,9 @@ const error = ref('')
 
 const colors = ['gray', 'blue', 'green', 'pink', 'orange', 'amber', 'yellow', 'cyan', 'teal', 'violet', 'purple'].map((c) => ({ label: c, value: c }))
 const modeOptions = computed(() => [
-  { label: __('Line total'), value: 'Line Total' },
-  { label: __('Per installment'), value: 'Per Installment' },
+  { label: __('Single payment (full amount)'), value: 'Single' },
+  { label: __('Total split into installments'), value: 'Line Total' },
+  { label: __('Amount of each installment'), value: 'Per Installment' },
   { label: __('Variable value (by project month)'), value: 'Variable' },
 ])
 const tagOptions = computed(() => [
@@ -594,7 +604,35 @@ async function load() {
   scrollToPending()
 }
 
-const maxInstallments = computed(() => Math.max(1, ...(data.value?.lines || []).map((l) => l.installments.length)))
+// colunas = meses do projeto (do inicio ate o fim; se algum pagamento passar do fim, a coluna fica amarela)
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const mkey = (d) => (d ? String(d).slice(0, 7) : '')
+const monthLabel = (d) => (d ? `${MESES[Number(String(d).slice(5, 7)) - 1]}/${String(d).slice(0, 4)}` : '')
+const months = computed(() => {
+  const lines = data.value?.lines || []
+  const dues = lines.flatMap((l) => l.installments.map((p) => mkey(p.due_date))).filter(Boolean)
+  const start = [mkey(data.value?.summary?.start_date), ...dues].filter(Boolean).sort()[0]
+  const fim = [mkey(endDate.value), ...dues].filter(Boolean).sort().pop()
+  if (!start || !fim) return []
+  const out = []
+  let [y, m] = start.split('-').map(Number)
+  for (let i = 0; i < 120; i++) {
+    const key = `${y}-${String(m).padStart(2, '0')}`
+    out.push({ key, label: monthLabel(key + '-01'), after: !!(endDate.value && key > mkey(endDate.value)) })
+    if (key >= fim) break
+    m += 1
+    if (m > 12) ((m = 1), (y += 1))
+  }
+  return out
+})
+const maxInstallments = computed(() => Math.max(1, months.value.length))
+const cellsOf = (line) => months.value.map((m) => line.installments.find((p) => mkey(p.due_date) === m.key) || null)
+const maxParcelas = computed(() => {
+  if (!endDate.value || !lineForm.first_due_date) return 0
+  const [y1, m1] = mkey(lineForm.first_due_date).split('-').map(Number)
+  const [y2, m2] = mkey(endDate.value).split('-').map(Number)
+  return Math.max(0, (y2 - y1) * 12 + m2 - m1 + 1)
+})
 // 4 parcelas ocupam a largura disponível (mín. 9,5rem cada); o resto rola. Acompanha o tamanho da tela.
 const gridStyle = computed(() => ({
   gridAutoFlow: 'column',
@@ -618,17 +656,17 @@ const alertReason = (line) => {
 const endDate = computed(() => data.value?.summary?.end_date || null)
 const afterEnd = (p) => !!(endDate.value && p.due_date && p.due_date > endDate.value)
 const lastThree = (line, p) => p.number > line.installments.length - 3
-const isRed = (line, p) => !p.paid && (lastThree(line, p) || afterEnd(p))
+const isRed = (line, p) => !p.paid && lastThree(line, p) && !afterEnd(p)
 const cellClass = (line, p) =>
   p.paid
-    ? lastThree(line, p) || afterEnd(p)
-      ? 'border-outline-red-2 bg-surface-green-1'
-      : 'border-outline-green-2 bg-surface-green-1'
-    : isRed(line, p)
-      ? 'border-outline-red-2 bg-surface-red-1'
-      : isLate(p)
-        ? 'border-outline-amber-2 bg-surface-amber-1'
-        : ''
+    ? 'border-outline-green-2 bg-surface-green-1'
+    : afterEnd(p)
+      ? 'border-2 border-outline-amber-2 bg-surface-amber-1'
+      : isRed(line, p)
+        ? 'border-outline-red-2 bg-surface-red-1'
+        : isLate(p)
+          ? 'border-outline-amber-2 bg-surface-amber-1'
+          : ''
 const isLate = (p) => !p.paid && p.due_date && new Date(p.due_date) < new Date(new Date().toDateString())
 
 // parcelas já pagas deslizam para a esquerda: começa na primeira coluna com algo pendente
@@ -641,7 +679,7 @@ function scrollToPending() {
   if (!el) return
   let first = maxInstallments.value
   for (const l of data.value.lines) {
-    const i = l.installments.findIndex((p) => !p.paid)
+    const i = cellsOf(l).findIndex((p) => p && !p.paid)
     if (i !== -1) first = Math.min(first, i)
   }
   const w = el.scrollWidth / maxInstallments.value
@@ -837,8 +875,8 @@ watch(lineForm, () => {
     try {
       preview.value = await call('crm.panda.finance.preview_line', {
         amount: lineForm.amount,
-        mode: lineForm.mode,
-        installments_count: lineForm.installments_count,
+        mode: lineForm.mode === 'Single' ? 'Line Total' : lineForm.mode,
+        installments_count: lineForm.mode === 'Single' ? 1 : lineForm.installments_count,
         first_due_date: lineForm.first_due_date,
         deal: props.deal,
       })
@@ -856,11 +894,13 @@ const previewText = computed(() => {
   const each = first === last ? money(first) : `${money(first)} (${__('last')}: ${money(last)})`
   return `${n} ${__('installments of')} ${each} = ${__('total')} ${money(p.total)}`
 })
+// "Pagamento unico" e o modo total da linha com 1 parcela
+const modeArgs = () => (lineForm.mode === 'Single' ? { mode: 'Line Total', installments_count: 1 } : {})
 async function saveLine() {
   const ok = await run(() =>
     editingName.value
-      ? call('crm.panda.finance.update_line_full', { name: editingName.value, ...lineForm, finance_tag: lineForm.finance_tag || null })
-      : call('crm.panda.finance.create_line', { deal: props.deal, ...lineForm, finance_tag: lineForm.finance_tag || null }),
+      ? call('crm.panda.finance.update_line_full', { name: editingName.value, ...lineForm, ...modeArgs(), finance_tag: lineForm.finance_tag || null })
+      : call('crm.panda.finance.create_line', { deal: props.deal, ...lineForm, ...modeArgs(), finance_tag: lineForm.finance_tag || null }),
   )
   if (ok) {
     lineDialog.value = false
@@ -889,6 +929,7 @@ function openEditLine(line) {
     mode: line.mode,
     amount: line.amount,
     installments_count: line.installments_count,
+    ...(line.mode === 'Line Total' && Number(line.installments_count) === 1 ? { mode: 'Single' } : {}),
     first_due_date: line.first_due_date || line.installments[0]?.due_date || '',
   })
   editingName.value = line.name

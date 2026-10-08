@@ -10149,3 +10149,67 @@ msgstr "Últimos eventos recebidos"
 #: panda
 msgid "none — the webhook is not arriving"
 msgstr "nenhum — o webhook não está chegando"
+
+#: panda
+msgid "Red: last 3 installments of each supplier"
+msgstr "Vermelho: 3 últimas parcelas de cada fornecedor"
+
+#: panda
+msgid "Yellow: after the project end"
+msgstr "Amarelo: depois do fim do projeto"
+
+#: panda
+msgid "After the project end"
+msgstr "Depois do fim do projeto"
+
+#: panda
+msgid "The project ends in"
+msgstr "O projeto termina em"
+
+#: panda
+msgid "at most"
+msgstr "no máximo"
+
+#: panda
+msgid "installments from this first due date"
+msgstr "parcelas a partir deste primeiro vencimento"
+
+#: panda
+msgid "A single payment with the full amount."
+msgstr "Um pagamento só, com o valor total."
+
+#: panda
+msgid "Single payment (full amount)"
+msgstr "Pagamento único (valor total)"
+
+#: panda
+msgid "Total split into installments"
+msgstr "Valor total dividido em parcelas"
+
+#: panda
+msgid "Amount of each installment"
+msgstr "Valor de cada parcela"
+
+#: panda
+msgid "Pending registration"
+msgstr "Pendentes de cadastro"
+
+#: panda
+msgid "People who sent emails and are not in Contacts yet. When the sender name matches a contact, the email is added to that contact automatically."
+msgstr "Quem mandou e-mail e ainda não está em Contatos. Quando o nome de quem enviou é igual ao de um contato, o e-mail entra nesse contato automaticamente."
+
+#: panda
+msgid "Nothing pending"
+msgstr "Nada pendente"
+
+#: panda
+msgid "emails"
+msgstr "e-mails"
+
+#: panda
+msgid "Contact created"
+msgstr "Contato criado"
+
+#: panda
+msgid "Pending emails"
+msgstr "E-mails pendentes"

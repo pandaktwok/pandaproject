@@ -195,6 +195,30 @@
     />
   </head>
   <body class="sm:overscroll-y-none no-scrollbar">
+    <!-- PandaProject: tela de abertura (logo + barra) ate o programa carregar -->
+    <div id="panda-splash">
+      <img src="/assets/crm/images/brand/icone-256.png" alt="PandaProject" />
+      <div class="pp-bar"><div></div></div>
+    </div>
+    <style>
+      #panda-splash { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; background: #1c1c1c; transition: opacity .35s ease; }
+      #panda-splash img { width: 112px; height: 112px; animation: pp-in .5s ease-out both; }
+      #panda-splash .pp-bar { width: 160px; height: 4px; border-radius: 4px; background: #3b3b3b; overflow: hidden; }
+      #panda-splash .pp-bar div { height: 100%; width: 40%; border-radius: 4px; background: #ededed; animation: pp-load 1s ease-in-out infinite; }
+      #panda-splash.pp-out { opacity: 0; pointer-events: none; }
+      @keyframes pp-load { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+      @keyframes pp-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+    </style>
+    <script>
+      window.__ppSplashStart = Date.now()
+      window.__ppHideSplash = function () {
+        var el = document.getElementById('panda-splash')
+        if (!el) return
+        var falta = Math.max(0, 900 - (Date.now() - window.__ppSplashStart))
+        setTimeout(function () { el.classList.add('pp-out'); setTimeout(function () { el.remove() }, 400) }, falta)
+      }
+      setTimeout(window.__ppHideSplash, 8000)
+    </script>
     <div id="app" class="h-full"></div>
     <script type="module" src="/src/main.js"></script>
   </body>

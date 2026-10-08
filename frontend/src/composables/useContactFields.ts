@@ -1,4 +1,5 @@
 import { call, toast } from 'frappe-ui'
+import { ref } from 'vue'
 import { validateEmail, validatePhone } from '@/utils'
 
 // Shared email/mobile/address side-panel field logic for Contact.vue (desktop)
@@ -31,6 +32,11 @@ interface DropdownOption {
 type SidePanelField = Record<string, unknown> & { fieldname?: string }
 
 export function useContactFields(contact: ContactDocument) {
+  // e-mails recebidos que ainda nao estao em Contatos: aparecem como sugestao no campo de e-mail
+  const pendentes = ref<{ email: string; nome: string }[]>([])
+  call('crm.panda.contatos.emails_pendentes')
+    .then((r: { email: string; nome: string }[]) => (pendentes.value = r || []))
+    .catch(() => {})
   // 'email' | 'mobile_no' (setAsPrimary) and 'email' | 'phone' (createNew)
   const isEmailField = (field: string) => field === 'email'
   const isEmailDoctype = (doctype: string) => doctype === 'Contact Email'
@@ -154,7 +160,12 @@ export function useContactFields(contact: ContactDocument) {
         itemPlaceholder: 'john@doe.com',
         validate: validateEmailOption,
         options: emailOptions(),
-        onCreate: (value: string) => createNew('email', value),
+        onCreate: async (value: string) => {
+          const ok = await createNew('email', value)
+          if (ok) pendentes.value = pendentes.value.filter((p) => p.email !== value)
+          return ok
+        },
+        suggestions: pendentes.value,
       }
     }
     if (field.fieldname === 'mobile_no') {

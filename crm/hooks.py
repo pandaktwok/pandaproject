@@ -328,6 +328,7 @@ doc_events = {
 scheduler_events = {
 	"all": ["crm.panda.chat.sincronizar_whatsapp"],
 	"hourly": [
+		"crm.panda.contatos.vincular_emails_automatico",
 		"crm.panda.drive.reprocessar_pendentes","crm.automation.events.emit_overdue_tasks"],
 	"daily": [
 		"crm.panda.chat.atualizar_fotos",
@@ -470,3 +471,7 @@ standard_dropdown_items = [
 		"is_standard": 1,
 	},
 ]
+
+
+# PandaProject: quem abre o dominio puro vai direto para o programa (pede login se precisar)
+website_redirects = [{"source": "/", "target": "/crm"}]

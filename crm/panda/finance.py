@@ -142,6 +142,7 @@ def get_finance(deal: str):
 			"paid": calc.from_cents(pago),
 			"remaining": calc.from_cents(restante),
 			"end_date": str(frappe.db.get_value("CRM Deal", deal, "expected_closure_date") or "") or None,
+			"start_date": str(frappe.db.get_value("CRM Deal", deal, "creation") or "")[:10] or None,
 		},
 		"tags": tags,
 		"lines": linhas,
@@ -181,11 +182,22 @@ def delete_tag(name: str):
 	return True
 
 
-def _n_parcelas(deal, mode, n, first_due):
-	"""Valor variavel: uma parcela por mes ate o fim do projeto."""
-	if mode != calc.VARIAVEL:
-		return n
+def _n_parcelas(deal, mode, n, first_due, atual: int = 0):
+	"""Valor variavel: uma parcela por mes ate o fim do projeto.
+	Demais modos: no maximo uma parcela por mes ate o fim do projeto (se o fim estiver definido)."""
 	fim = frappe.db.get_value("CRM Deal", deal, "expected_closure_date") if deal else None
+	if mode != calc.VARIAVEL:
+		if fim and first_due:
+			limite = calc.months_between(getdate(first_due), getdate(fim))
+			if limite < 1:
+				frappe.throw(_("O primeiro vencimento é depois do fim do projeto"))
+			if int(n or 0) > max(limite, int(atual or 0)):  # linha antiga ja maior: nao trava a edicao
+				frappe.throw(
+					_("O projeto termina em {0}: no máximo {1} parcela(s) a partir deste primeiro vencimento").format(
+						getdate(fim).strftime("%m/%Y"), limite
+					)
+				)
+		return n
 	if not fim:
 		frappe.throw(_("Defina a data de fim do projeto para usar o valor variável"))
 	meses = calc.months_between(getdate(first_due), getdate(fim))
@@ -303,7 +315,7 @@ def update_line_full(
 		frappe.throw(_("O fornecedor é obrigatório"))
 	if finance_tag and frappe.db.get_value("CRM Finance Tag", finance_tag, "deal") != line.deal:
 		frappe.throw(_("Etiqueta de outro projeto"))
-	installments_count = _n_parcelas(line.deal, mode, installments_count, first_due_date)
+	installments_count = _n_parcelas(line.deal, mode, installments_count, first_due_date, line.installments_count)
 	try:
 		total, parcelas = calc.rebuild(
 			_linha_para_parcelas(line), amount, mode, int(installments_count), getdate(first_due_date)

@@ -56,6 +56,34 @@
       </h2>
       <ContactTable :rows="data.newsletters" :loading="loading" @open="open" />
     </section>
+
+    <hr class="my-6 border-t-2 border-outline-gray-2" />
+
+    <!-- E-mails recebidos de quem ainda nao esta em Contatos -->
+    <section>
+      <h2 class="py-3 text-lg-semibold text-ink-gray-9">
+        {{ __('Pending registration') }}
+        <span class="ml-1 text-sm font-normal text-ink-gray-5">({{ data.pendentes.length }})</span>
+      </h2>
+      <p class="-mt-2 mb-3 text-xs text-ink-gray-5">
+        {{ __('People who sent emails and are not in Contacts yet. When the sender name matches a contact, the email is added to that contact automatically.') }}
+      </p>
+      <div class="overflow-hidden rounded-md border">
+        <div v-if="!data.pendentes.length" class="px-3 py-6 text-center text-sm text-ink-gray-5">{{ __('Nothing pending') }}</div>
+        <div
+          v-for="e in data.pendentes"
+          :key="e.email"
+          class="flex items-center gap-3 border-b px-3 py-2 last:border-b-0"
+        >
+          <Avatar :label="e.nome || e.email" size="md" />
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-sm text-ink-gray-9">{{ e.nome || e.email }}</div>
+            <div class="truncate text-xs text-ink-gray-5">{{ e.email }} · {{ e.qtd }} {{ __('emails') }}</div>
+          </div>
+          <Button size="sm" :label="__('Create contact')" iconLeft="lucide-user-plus" @click="criarDeEmail(e)" />
+        </div>
+      </div>
+    </section>
   </div>
 
   <ContactModal v-if="showContactModal" v-model="showContactModal" :contact="{}" />
@@ -65,7 +93,7 @@
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import ContactModal from '@/components/Modals/ContactModal.vue'
 import ContactTable from '@/components/ContactTable.vue'
-import { Breadcrumbs, Button, FormControl, call, toast } from 'frappe-ui'
+import { Avatar, Breadcrumbs, Button, FormControl, call, toast } from 'frappe-ui'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { usersStore } from '@/stores/users'
@@ -76,7 +104,7 @@ const q = ref('')
 const origem = ref('')
 const loading = ref(false)
 const showContactModal = ref(false)
-const data = reactive({ contatos: [], newsletters: [], origens: [] })
+const data = reactive({ contatos: [], newsletters: [], pendentes: [], origens: [] })
 const imp = reactive({ estado: '' })
 
 const origemOptions = computed(() => [
@@ -91,6 +119,7 @@ async function load() {
     const r = await call('crm.panda.contatos.listar', { q: q.value, origem: origem.value })
     data.contatos = r.contatos
     data.newsletters = r.newsletters
+    data.pendentes = r.pendentes || []
     if (!data.origens.length) data.origens = r.origens
   } catch (e) {
     toast.error(e?.messages?.[0] || e?.message || String(e))
@@ -102,6 +131,15 @@ let t
 function debouncedLoad() {
   clearTimeout(t)
   t = setTimeout(load, 300)
+}
+async function criarDeEmail(e) {
+  try {
+    const nome = await call('crm.panda.contatos.criar_de_email', { email: e.email, nome: e.nome })
+    toast.success(__('Contact created'))
+    router.push({ name: 'Contact', params: { contactId: nome } })
+  } catch (err) {
+    toast.error(err?.messages?.[0] || err?.message || String(err))
+  }
 }
 const open = (c) => router.push({ name: 'Contact', params: { contactId: c.name } })
 

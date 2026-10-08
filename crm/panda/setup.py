@@ -15,6 +15,7 @@ FLAG_V7 = "panda_defaults_v7"
 FLAG_V8 = "panda_defaults_v8"
 FLAG_V9 = "panda_defaults_v9"
 FLAG_V10 = "panda_defaults_v10"
+FLAG_V11 = "panda_defaults_v11"
 
 
 def apply_defaults():
@@ -28,6 +29,7 @@ def apply_defaults():
 	_apply_v8()
 	_apply_v9()
 	_apply_v10()
+	_apply_v11()
 	_criar_campo_arquivos()
 	_desligar_lead_automatico()
 
@@ -71,6 +73,46 @@ def _apply_v8():
 	frappe.db.set_single_value("System Settings", "currency_precision", 2)
 	frappe.db.set_single_value("Global Defaults", "default_currency", "BRL")
 	frappe.db.set_default(FLAG_V8, "1")
+	frappe.db.commit()
+	frappe.clear_cache()
+
+
+def _apply_v11():
+	"""Contato sem saudacao/sobrenome (no Brasil usamos o nome completo); data dd/mm/aaaa; entrar direto no CRM."""
+	if frappe.db.get_default(FLAG_V11):
+		return
+	import json
+
+	def _limpa(layout):
+		for sec in layout:
+			for col in sec.get("columns", []):
+				col["fields"] = [f for f in col.get("fields", []) if f not in ("salutation", "last_name")]
+			sec["columns"] = [c for c in sec.get("columns", []) if c.get("fields") or len(sec.get("columns", [])) == 1]
+		return [s for s in layout if any(c.get("fields") for c in s.get("columns", []))]
+
+	for nome in ("Contact-Quick Entry", "Contact-Side Panel", "Contact-Data Fields"):
+		if frappe.db.exists("CRM Fields Layout", nome):
+			try:
+				lay = json.loads(frappe.db.get_value("CRM Fields Layout", nome, "layout") or "[]")
+				frappe.db.set_value("CRM Fields Layout", nome, "layout", json.dumps(_limpa(lay)))
+			except Exception:
+				frappe.log_error(title=f"PandaProject: layout {nome}")
+	try:  # logo do PandaProject na tela de login (inclusive a de carregamento)
+		frappe.db.set_single_value("Website Settings", "splash_image", "/assets/crm/images/brand/icone-256.png")
+		frappe.db.set_single_value("Website Settings", "app_logo", "/assets/crm/images/brand/logo-horizontal-claro-1400w.png")
+		frappe.db.set_single_value("Navbar Settings", "app_logo", "/assets/crm/images/brand/icone-256.png")
+	except Exception:
+		pass
+	try:
+		frappe.db.set_single_value("System Settings", "date_format", "dd/mm/yyyy")
+	except Exception:
+		pass
+	try:
+		if frappe.get_meta("System Settings").has_field("default_app"):
+			frappe.db.set_single_value("System Settings", "default_app", "crm")
+	except Exception:
+		pass
+	frappe.db.set_default(FLAG_V11, "1")
 	frappe.db.commit()
 	frappe.clear_cache()
 
