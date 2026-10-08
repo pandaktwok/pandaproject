@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conectado · PandaProject</title>
+<link rel="icon" href="/assets/crm/images/brand/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: #1c1c1c; color: #ededed; font-family: Poppins, system-ui, sans-serif;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 24px; text-align: center; }
+  .logos { display: flex; align-items: center; gap: 22px; }
+  .logos img { width: 84px; height: 84px; border-radius: 20px; object-fit: contain; }
+  .logos .panda { border: 1px solid #3b3b3b; }
+  .logos .servico { background: #fff; padding: 12px; }
+  .elo { width: 96px; height: 2px; background: #3b3b3b; display: flex; align-items: center; justify-content: center; }
+  .ok { width: 34px; height: 34px; border-radius: 17px; background: #ededed; display: flex; align-items: center; justify-content: center; }
+  h1 { margin: 0; font-size: 28px; font-weight: 600; color: #fff; }
+  p { margin: 8px 0 0; font-size: 15px; font-weight: 300; color: #b1b1b1; max-width: 380px; }
+  p b { color: #fff; font-weight: 500; }
+  .barra { width: 220px; height: 4px; border-radius: 4px; background: #3b3b3b; overflow: hidden; }
+  .barra div { height: 100%; width: 0; background: #ededed; border-radius: 4px; animation: enche 5s linear forwards; }
+  .nota { font-size: 13px; color: #b1b1b1; }
+  a { color: #ededed; font-size: 14px; } a:hover { color: #fff; }
+  .erro h1 { color: #f5b5b5; }
+  @keyframes enche { to { width: 100%; } }
+  @media (max-width: 420px) { .logos img { width: 64px; height: 64px; } .elo { width: 56px; } }
+</style>
+</head>
+<body>
+  <div class="logos">
+    <img class="panda" src="/assets/crm/images/brand/icone-256.png" alt="PandaProject">
+    <div class="elo"><span class="ok"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1c1c1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></div>
+    <img class="servico" id="logo" src="/assets/crm/images/brand/google-drive.png" alt="Google Drive">
+  </div>
+  <div>
+    <h1 id="titulo">Tudo certo!</h1>
+    <p id="texto">O PandaProject está conectado ao <span id="nome">Google Drive</span><span id="contaTxt"> de <b id="conta"></b></span></p>
+  </div>
+  <div class="barra"><div></div></div>
+  <span class="nota">Voltando para o programa em 5 segundos…</span>
+  <a id="ir" href="/crm">Ir agora</a>
+<script>
+  (function () {
+    var q = new URLSearchParams(location.search)
+    var conta = q.get('conta') || ''
+    if (conta) document.getElementById('conta').textContent = conta
+    else document.getElementById('contaTxt').style.display = 'none'
+    // destino so dentro do proprio programa
+    var volta = q.get('volta') || '/crm'
+    if (volta.charAt(0) !== '/' || volta.charAt(1) === '/') volta = '/crm'
+    document.getElementById('ir').setAttribute('href', volta)
+    setTimeout(function () { location.replace(volta) }, 5000)
+  })()
+</script>
+</body>
+</html>

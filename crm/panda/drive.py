@@ -103,8 +103,12 @@ def callback(code: str | None = None, state: str | None = None, error: str | Non
 	except Exception:
 		cfg.drive_account = ""
 	cfg.save(ignore_permissions=True)
+	from urllib.parse import urlencode
+
 	frappe.local.response["type"] = "redirect"
-	frappe.local.response["location"] = "/crm?drive=ok"
+	frappe.local.response["location"] = "/assets/crm/conectado.html?" + urlencode(
+		{"s": "drive", "conta": cfg.drive_account or "", "volta": "/crm"}
+	)
 
 
 def _sobre(token: str) -> dict:
