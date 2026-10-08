@@ -14,7 +14,9 @@ from datetime import timedelta
 import frappe
 import requests
 from frappe import _
-from frappe.utils import add_to_date, get_url, now_datetime
+from frappe.utils import add_to_date, now_datetime
+
+from crm.panda.chat import get_url
 from frappe.utils.password import get_decrypted_password
 
 DOC = "Panda Integrations"

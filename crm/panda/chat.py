@@ -26,7 +26,10 @@ DOC = "Panda Integrations"
 def get_url() -> str:
 	"""Endereco que a Evolution/Meta enxergam: o publico informado em Conexoes, senao o do site."""
 	publico = (frappe.db.get_single_value("Panda Integrations", "public_url") or "").strip().rstrip("/")
-	return publico or _get_url()
+	if publico:
+		return publico
+	# atras de proxy com HTTPS o Frappe ainda gruda a porta interna (:8000) no endereco
+	return re.sub(r"^(https://[^/:]+):8000", r"\1", _get_url())
 
 CONV = "CRM Chat Conversation"
 MSG = "CRM Chat Message"

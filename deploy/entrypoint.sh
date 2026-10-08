@@ -24,6 +24,8 @@ fi
 
 bench --site "$SITE" migrate
 bench --site "$SITE" set-config host_name "https://${SITE}"
+# sem isso o Frappe gruda ":8000" nos links (OAuth do Google, webhooks)
+bench set-config -g restart_supervisor_on_update 1
 bench --site "$SITE" set-config server_script_enabled 0
 bench use "$SITE"
 exec bench start

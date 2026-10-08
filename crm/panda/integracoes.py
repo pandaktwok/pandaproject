@@ -8,7 +8,6 @@ import secrets
 
 import frappe
 from frappe import _
-from frappe.utils import get_url
 from frappe.utils.password import get_decrypted_password
 
 DOC = "Panda Integrations"
@@ -29,6 +28,12 @@ def _google():
 
 
 @frappe.whitelist()
+def _url():
+	from crm.panda.chat import get_url
+
+	return get_url()
+
+
 def get_config():
 	_admin()
 	cfg = frappe.get_single(DOC)
@@ -37,15 +42,15 @@ def get_config():
 		"site": {
 			"configured": bool(token_do_site()),
 			"origin": cfg.site_origin or "",
-			"endpoint": f"{get_url()}/api/method/crm.panda.contatos.cadastro_site",
+			"endpoint": f"{_url()}/api/method/crm.panda.contatos.cadastro_site",
 		},
 		"google": {
 			"enabled": bool(g.enable),
 			"client_id": g.client_id or "",
 			"secret_set": bool(get_decrypted_password("Google Settings", "Google Settings", "client_secret", raise_exception=False)),
 			"redirect_uris": [
-				f"{get_url()}?cmd=frappe.integrations.doctype.google_calendar.google_calendar.google_callback",
-				f"{get_url()}/api/method/crm.panda.drive.callback",
+				f"{_url()}?cmd=frappe.integrations.doctype.google_calendar.google_calendar.google_callback",
+				f"{_url()}/api/method/crm.panda.drive.callback",
 			],
 		},
 		"calendar": {"enabled": bool(cfg.calendar_enabled)},
