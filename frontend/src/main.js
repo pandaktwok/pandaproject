@@ -68,14 +68,14 @@ if (import.meta.env.DEV) {
       socket = initSocket()
       app.config.globalProperties.$socket = socket
       app.mount('#app')
-      window.__ppHideSplash?.()
+      window.ppHideSplash?.()
     },
   )
 } else {
   socket = initSocket()
   app.config.globalProperties.$socket = socket
   app.mount('#app')
-  window.__ppHideSplash?.()
+  window.ppHideSplash?.()
 }
 
 if (import.meta.env.DEV) {

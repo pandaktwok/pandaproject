@@ -210,14 +210,14 @@
       @keyframes pp-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
     </style>
     <script>
-      window.__ppSplashStart = Date.now()
-      window.__ppHideSplash = function () {
+      window.ppSplashStart = Date.now()
+      window.ppHideSplash = function () {
         var el = document.getElementById('panda-splash')
         if (!el) return
-        var falta = Math.max(0, 900 - (Date.now() - window.__ppSplashStart))
+        var falta = Math.max(0, 900 - (Date.now() - window.ppSplashStart))
         setTimeout(function () { el.classList.add('pp-out'); setTimeout(function () { el.remove() }, 400) }, falta)
       }
-      setTimeout(window.__ppHideSplash, 8000)
+      setTimeout(window.ppHideSplash, 8000)
     </script>
     <div id="app" class="h-full"></div>
     <script type="module" src="/src/main.js"></script>
