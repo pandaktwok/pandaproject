@@ -13,13 +13,16 @@
     <!-- Etiquetas financeiras -->
     <section>
       <div class="mb-2 flex items-center justify-between">
-        <h3 class="text-lg-semibold text-ink-gray-9">
-          {{ __('Finance Tags') }}
-        </h3>
+        <button type="button" class="flex items-center gap-1.5" @click="alternar('tags')">
+          <LucideChevronDown class="h-4 w-4 text-ink-gray-6 transition-transform" :class="fechado.tags ? '-rotate-90' : ''" />
+          <h3 class="text-lg-semibold text-ink-gray-9">{{ __('Finance Tags') }}</h3>
+          <span v-if="fechado.tags && data?.tags?.length" class="text-sm text-ink-gray-5">({{ data.tags.length }})</span>
+        </button>
         <Button variant="subtle" :label="__('New tag')" @click="openTag()">
           <template #prefix><LucideTag class="h-4 w-4" /></template>
         </Button>
       </div>
+      <div v-show="!fechado.tags">
       <div v-if="!data?.tags?.length" class="text-sm text-ink-gray-4">
         {{ __('No finance tags yet') }}
       </div>
@@ -47,18 +50,26 @@
           </div>
         </div>
       </div>
+      </div>
     </section>
 
     <!-- Cronograma de pagamentos (tabela) -->
     <section>
       <div class="mb-2 flex items-center justify-between">
-        <h3 class="text-lg-semibold text-ink-gray-9">
-          {{ __('Payment schedule') }}
-        </h3>
+        <div class="flex items-center gap-2">
+          <button type="button" class="flex items-center gap-1.5" @click="alternar('cron')">
+            <LucideChevronDown class="h-4 w-4 text-ink-gray-6 transition-transform" :class="fechado.cron ? '-rotate-90' : ''" />
+            <h3 class="text-lg-semibold text-ink-gray-9">{{ __('Payment schedule') }}</h3>
+          </button>
+          <Button variant="ghost" :title="__('Open project folder in Google Drive')" :loading="abrindoPasta" @click="abrirPasta">
+            <template #icon><LucideFolder class="h-4 w-4" /></template>
+          </Button>
+        </div>
         <Button variant="solid" :label="__('New payment line')" @click="openLine()">
           <template #prefix><LucideTable class="h-4 w-4" /></template>
         </Button>
       </div>
+      <div v-show="!fechado.cron">
       <div v-if="!data?.lines?.length" class="text-sm text-ink-gray-4">
         {{ __('No payment lines yet') }}
       </div>
@@ -241,6 +252,7 @@
             </div>
           </div>
         </div>
+      </div>
       </div>
       </div>
     </section>
@@ -547,6 +559,36 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({ deal: { type: String, required: true } })
+
+// recolher/expandir (cada secao separada; lembra a escolha neste navegador)
+const CHAVE_FECHADO = 'pp_finance_fechado'
+function lerFechado() {
+  try {
+    return JSON.parse(localStorage.getItem(CHAVE_FECHADO) || '{}') || {}
+  } catch (e) {
+    return {}
+  }
+}
+const fechado = reactive({ tags: false, cron: false, ...lerFechado() })
+function alternar(k) {
+  fechado[k] = !fechado[k]
+  try {
+    localStorage.setItem(CHAVE_FECHADO, JSON.stringify({ tags: fechado.tags, cron: fechado.cron }))
+  } catch (e) {}
+}
+
+const abrindoPasta = ref(false)
+async function abrirPasta() {
+  abrindoPasta.value = true
+  try {
+    const r = await call('crm.panda.drive.pasta_projeto', { deal: props.deal })
+    window.open(r.url, '_blank', 'noopener')
+  } catch (e) {
+    toast.error(msg(e))
+  } finally {
+    abrindoPasta.value = false
+  }
+}
 
 const data = ref(null)
 const scroller = ref(null)

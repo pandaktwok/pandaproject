@@ -327,6 +327,25 @@ def _copiar(doc, tok) -> tuple[str, str]:
 	return caminho, r.json()["id"]
 
 
+@frappe.whitelist()
+def pasta_projeto(deal: str):
+	"""Link da pasta raiz do projeto no Google Drive (cria se ainda nao existir)."""
+	if not frappe.has_permission("CRM Deal", "read", deal):
+		frappe.throw(_("Sem permissão neste projeto"), frappe.PermissionError)
+	if not frappe.db.get_single_value(DOC, "drive_enabled") or not _ativo():
+		frappe.throw(_("O Google Drive não está conectado. Conecte em Configurações → Conexões."))
+	try:
+		tok = _access_token()
+		nome_proj = frappe.db.get_value("CRM Deal", deal, "project_name") or deal
+		raiz = frappe.db.get_single_value(DOC, "drive_root_folder") or "Panda Project"
+		pai = "root"
+		for nome in (raiz, _limpo(nome_proj)):
+			pai = _pasta(tok, _limpo(nome), pai)
+	except Exception as e:
+		frappe.throw(_("Não consegui abrir a pasta no Drive: {0}").format(str(e)[:200]))
+	return {"url": f"https://drive.google.com/drive/folders/{pai}"}
+
+
 # ---------------------------------------------------------------- selo no card de arquivos
 @frappe.whitelist()
 def get_badges(deal: str):
