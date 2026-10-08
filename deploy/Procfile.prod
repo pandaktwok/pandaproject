@@ -1,0 +1,4 @@
+web: /home/frappe/frappe-bench/env/bin/gunicorn -b 0.0.0.0:8000 -w 2 --threads 4 -t 120 --chdir /home/frappe/frappe-bench/sites "frappe.app:application_with_statics()"
+socketio: bench socketio
+schedule: bench schedule
+worker: bench worker 1>> logs/worker.log 2>> logs/worker.error.log

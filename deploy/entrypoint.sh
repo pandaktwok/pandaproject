@@ -2,6 +2,7 @@
 set -e
 cd /home/frappe/frappe-bench
 SITE="${SITE_NAME:?defina SITE_NAME no .env}"
+echo "Aguardando MariaDB..."; until (echo > /dev/tcp/${DB_HOST:-mariadb}/3306) 2>/dev/null; do sleep 2; done; sleep 3
 
 bench set-mariadb-host "${DB_HOST:-mariadb}"
 bench set-redis-cache-host "redis://${REDIS_HOST:-redis}:6379"
@@ -10,7 +11,7 @@ bench set-redis-socketio-host "redis://${REDIS_HOST:-redis}:6379"
 printf '[client]\nskip-ssl\n' > ~/.my.cnf
 
 # pastas de volume podem chegar vazias/sem dono
-mkdir -p sites/assets
+mkdir -p sites/assets && cp -a /home/frappe/assets-build/. sites/assets/
 echo "$SITE" > sites/currentsite.txt
 
 if [ ! -d "sites/$SITE" ]; then

@@ -7,9 +7,10 @@ WORKDIR /home/frappe
 RUN bench init --skip-redis-config-generation --skip-assets --version version-15 --frappe-branch version-15 frappe-bench
 
 WORKDIR /home/frappe/frappe-bench
-COPY --chown=frappe:frappe . /home/frappe/crm-src
-RUN bench get-app crm /home/frappe/crm-src --skip-assets \
- && bench build --app crm \
+COPY --chown=frappe:frappe . /home/frappe/crm
+RUN cd /home/frappe/crm && git init -q && git add -A && git -c user.email=build@local -c user.name=build commit -qm build \
+ && cd /home/frappe/frappe-bench && bench get-app /home/frappe/crm --skip-assets \
+ && bench build && cp -a sites/assets /home/frappe/assets-build \
  && printf '[client]\nskip-ssl\n' > /home/frappe/.my.cnf \
  && sed -i '/redis/d;/watch/d' Procfile
 
