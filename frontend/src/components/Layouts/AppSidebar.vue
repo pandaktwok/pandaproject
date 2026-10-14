@@ -120,6 +120,15 @@
             />
           </div>
           <SidebarItem
+            :label="isDark ? __('Light mode') : __('Dark mode')"
+            @click="toggleDarkMode"
+          >
+            <template #prefix>
+              <LucideSun v-if="isDark" class="size-4 text-ink-gray-7" />
+              <LucideMoon v-else class="size-4 text-ink-gray-7" />
+            </template>
+          </SidebarItem>
+          <SidebarItem
             v-if="isManager()"
             :label="__('Connections')"
             @click="openConnections"
@@ -187,6 +196,8 @@
 <script setup>
 import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import LucidePlug from '~icons/lucide/plug'
+import LucideSun from '~icons/lucide/sun'
+import LucideMoon from '~icons/lucide/moon'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
 import ConvertIcon from '@/components/Icons/ConvertIcon.vue'
@@ -226,7 +237,7 @@ import {
 } from '@/composables/settings'
 import { showChangePasswordModal } from '@/composables/modals'
 import { useBroadcast } from '@/composables/useBroadcast.js'
-import { call, Sidebar, SidebarItem, SidebarLabel, Tooltip } from 'frappe-ui'
+import { call, Sidebar, SidebarItem, SidebarLabel, Tooltip, useTheme } from 'frappe-ui'
 import {
   SignupBanner,
   TrialBanner,
@@ -255,6 +266,12 @@ const { toggle: toggleNotificationPanel } = notificationsStore()
 const { capture } = useTelemetry()
 const { clearDemoData, isDemoDataCreated } = useDemoData()
 const { send } = useBroadcast()
+
+const { currentTheme, setTheme } = useTheme()
+const isDark = computed(() => currentTheme.value === 'dark')
+function toggleDarkMode() {
+  setTheme(isDark.value ? 'light' : 'dark')
+}
 
 const isSidebarCollapsed = useStorage('isSidebarCollapsed', false)
 

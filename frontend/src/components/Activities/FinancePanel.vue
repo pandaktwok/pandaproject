@@ -269,7 +269,20 @@
             <div class="flex items-center gap-1.5 text-base-medium text-ink-gray-9">
               <LucideFolder class="h-4 w-4" /> {{ f.label }}
             </div>
-            <a :href="zipUrl(f)" class="text-xs text-ink-gray-6 underline">ZIP</a>
+            <div class="flex items-center gap-3">
+              <button
+                v-if="f.files.some((x) => badges[x.name]?.status === 'Copied')"
+                type="button"
+                class="flex items-center gap-1 text-xs text-ink-gray-7 hover:underline disabled:opacity-50"
+                :title="__('Open this folder in Google Drive')"
+                :disabled="abrindoParcela === f.line + f.number"
+                @click="abrirParcela(f)"
+              >
+                <GoogleLogo class="h-3.5 w-3.5" />
+                Drive
+              </button>
+              <a :href="zipUrl(f)" class="text-xs text-ink-gray-6 underline">ZIP</a>
+            </div>
           </div>
           <div class="mt-1 text-xs text-ink-gray-5">{{ f.supplier }}</div>
           <a
@@ -491,7 +504,7 @@
   <!-- Diálogo: registrar pagamento (corpo rola; rodapé sempre visível) -->
   <Dialog v-model:open="payDialog" :size="'xl'">
     <template #body>
-      <div class="bg-surface-elevation-1 px-4 pt-5 sm:px-6">
+      <div class="bg-surface-elevation-1 px-4 pt-5 text-ink-gray-8 sm:px-6">
         <h3 class="mb-4 text-2xl-semibold text-ink-gray-9">
           {{ __('Register payment') }} — {{ payForm.supplier }} ({{ payForm.number }})
         </h3>
@@ -517,10 +530,10 @@
             </div>
           </div>
           <div v-if="payPreview && payDiffers" class="mt-4">
-            <div class="mb-2 text-sm text-ink-gray-6">
+            <div class="mb-2 text-sm text-ink-gray-8">
               {{ __('The value differs from the expected one. The remaining installments will be readjusted:') }}
             </div>
-            <table class="w-full text-sm">
+            <table class="w-full text-sm text-ink-gray-8">
               <thead class="text-left text-ink-gray-5">
                 <tr>
                   <th class="py-1">#</th>
@@ -551,6 +564,7 @@
 </template>
 
 <script setup>
+import GoogleLogo from '@/components/Icons/GoogleLogo.vue'
 import MoneyInput from '@/components/Controls/MoneyInput.vue'
 import { call, toast, DatePicker, Avatar } from 'frappe-ui'
 import { getFormat } from '@/utils'
@@ -575,6 +589,19 @@ function alternar(k) {
   try {
     localStorage.setItem(CHAVE_FECHADO, JSON.stringify({ tags: fechado.tags, cron: fechado.cron }))
   } catch (e) {}
+}
+
+const abrindoParcela = ref(null)
+async function abrirParcela(f) {
+  abrindoParcela.value = f.line + f.number
+  try {
+    const r = await call('crm.panda.drive.pasta_parcela', { deal: props.deal, line: f.line, number: f.number })
+    window.open(r.url, '_blank', 'noopener')
+  } catch (e) {
+    toast.error(msg(e))
+  } finally {
+    abrindoParcela.value = null
+  }
 }
 
 const abrindoPasta = ref(false)

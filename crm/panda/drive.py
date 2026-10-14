@@ -346,6 +346,49 @@ def pasta_projeto(deal: str):
 	return {"url": f"https://drive.google.com/drive/folders/{pai}"}
 
 
+def _achar(tok, nome: str, pai: str) -> str | None:
+	"""Como _pasta, mas so procura: nunca cria. Devolve None se nao existir."""
+	r = requests.get(
+		f"{API}/files",
+		params={
+			"q": f"name='{_q(nome)}' and mimeType='{PASTA}' and '{pai}' in parents and trashed=false",
+			"fields": "files(id)",
+			"pageSize": 1,
+		},
+		headers=_h(tok),
+		timeout=30,
+	)
+	r.raise_for_status()
+	achados = r.json().get("files", [])
+	return achados[0]["id"] if achados else None
+
+
+@frappe.whitelist()
+def pasta_parcela(deal: str, line: str, number):
+	"""Link no Drive da pasta 'Parcela N - MM-AAAA' de um pagamento (so abre; nao cria)."""
+	if not frappe.has_permission("CRM Deal", "read", deal):
+		frappe.throw(_("Sem permissão neste projeto"), frappe.PermissionError)
+	if not frappe.db.get_single_value(DOC, "drive_enabled") or not _ativo():
+		frappe.throw(_("O Google Drive não está conectado. Conecte em Configurações → Conexões."))
+	n = int(number)
+	due = frappe.db.get_value("CRM Payment Installment", {"parent": line, "number": n}, "due_date")
+	pasta_parcela_nome = f"Parcela {n} - {due.strftime('%m-%Y')}" if due else f"Parcela {n}"
+	nome_proj = frappe.db.get_value("CRM Deal", deal, "project_name") or deal
+	raiz = frappe.db.get_single_value(DOC, "drive_root_folder") or "Panda Project"
+	pai = "root"
+	try:
+		tok = _access_token()
+		for nome in (raiz, _limpo(nome_proj), "Financeiro", pasta_parcela_nome):
+			pai = _achar(tok, _limpo(nome), pai)
+			if pai is None:
+				break
+	except Exception as e:
+		frappe.throw(_("Não consegui abrir a pasta no Drive: {0}").format(str(e)[:200]))
+	if pai is None:
+		frappe.throw(_("Essa pasta ainda não foi copiada ao Drive."))
+	return {"url": f"https://drive.google.com/drive/folders/{pai}"}
+
+
 # ---------------------------------------------------------------- selo no card de arquivos
 @frappe.whitelist()
 def get_badges(deal: str):

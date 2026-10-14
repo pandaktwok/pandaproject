@@ -10217,3 +10217,9 @@ msgstr "E-mails pendentes"
 #: panda
 msgid "Open project folder in Google Drive"
 msgstr "Abrir a pasta do projeto no Google Drive"
+
+msgid "Open this folder in Google Drive"
+msgstr "Abrir esta pasta no Google Drive"
+
+msgid "Essa pasta ainda não foi copiada ao Drive."
+msgstr "Essa pasta ainda não foi copiada ao Drive."
