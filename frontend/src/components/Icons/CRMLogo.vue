@@ -1,6 +1,6 @@
 <template>
   <img
-    src="/assets/crm/images/brand/icone-128.png"
+    :src="'/assets/crm/images/brand/icone-128.png'"
     alt="PandaProject"
     class="object-contain"
   />
